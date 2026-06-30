@@ -8,82 +8,78 @@
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="https://cdn.adinplay.com/ads.js"></script>
 <style>
-  body { margin:0; overflow:hidden; background:#000; font-family:'Arial Black',Arial; touch-action:none; }
-  #menu { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:linear-gradient(135deg,#1a0033ee,#2a0055ee); padding:50px; border-radius:30px; border:4px solid #2DD4BF; text-align:center; box-shadow:0 0 60px #2DD4BF80; backdrop-filter:blur(10px); }
-  input,select { padding:18px; border-radius:15px; border:3px solid #2DD4BF; margin:12px; background:#0a0015; color:#fff; font-size:18px; width:250px; }
-  button { padding:20px 60px; background:linear-gradient(135deg,#2DD4BF,#1de9b6); border:none; border-radius:15px; font-weight:900; cursor:pointer; font-size:20px; color:#000; box-shadow:0 8px 25px #2DD4BF80; margin:10px; }
-  button:active { transform:scale(0.92); }
-  #hud { position:absolute; top:25px; left:25px; color:#fff; font-size:32px; font-weight:900; display:none; text-shadow:0 0 15px #2DD4BF, 2px 2px 4px #000; }
-  #minimap { position:absolute; bottom:25px; right:25px; width:200px; height:200px; background:rgba(0,0,0,0.8); border:4px solid #2DD4BF; border-radius:20px; display:none; box-shadow:0 0 30px #2DD4BF80; }
-  #dead { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:linear-gradient(135deg,#1a0033ee,#330000ee); padding:50px; border-radius:30px; border:4px solid #ff4444; text-align:center; display:none; box-shadow:0 0 60px #ff444480; backdrop-filter:blur(10px); }
-  #leaderboard { position:absolute; top:25px; right:25px; background:rgba(0,0,0,0.8); padding:25px; border-radius:20px; color:#fff; border:4px solid #2DD4BF; display:none; min-width:220px; box-shadow:0 0 30px #2DD4BF80; }
-  #boost { position:absolute; bottom:25px; left:25px; width:100px; height:100px; border-radius:50%; background:radial-gradient(circle,#2DD4BF50,#2DD4BF20); border:4px solid #2DD4BF; display:none; box-shadow:0 0 30px #2DD4BF80; }
-  #killFeed { position:absolute; top:100px; left:50%; transform:translateX(-50%); color:#fff; font-weight:bold; text-align:center; }
+  body { margin:0; overflow:hidden; background:#161616; font-family:Arial; touch-action:none; }
+  #menu { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.85); padding:40px; border-radius:15px; text-align:center; }
+  input,select { padding:12px; border-radius:8px; border:2px solid #555; margin:10px; background:#222; color:#fff; font-size:16px; width:200px; }
+  button { padding:15px 50px; background:#00ff88; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:18px; color:#000; }
+  #hud { position:absolute; top:15px; left:15px; color:#fff; font-size:20px; font-weight:bold; display:none; text-shadow:2px 2px #000; }
+  #minimap { position:absolute; bottom:15px; right:15px; width:140px; height:140px; background:rgba(0,0,0,0.4); border:2px solid #333; border-radius:50%; display:none; }
+  #dead { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); padding:40px; border-radius:15px; text-align:center; display:none; }
+  #leaderboard { position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.4); padding:10px 15px; border-radius:8px; color:#fff; display:none; min-width:160px; }
+  #boost { position:absolute; bottom:25px; left:25px; width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.1); border:2px solid #fff; display:none; }
+  #length { position:absolute; bottom:15px; left:15px; color:#fff; font-size:16px; display:none; text-shadow:2px 2px #000; }
 </style>
 </head>
 <body>
 <div id="menu">
-  <h1 style="color:#2DD4BF; font-size:48px; margin-bottom:25px; text-shadow:0 0 30px #2DD4BF;">🐍 Snake Arena.IO</h1>
-  <input id="name" placeholder="Pseudo" value="Player" maxlength="12">
-  <br>
-  <select id="skin">
-    <option value="cyan">Cyan Néon - Gratuit</option>
-    <option value="gold">Or Légendaire - 1 Pub</option>
-    <option value="rainbow">Rainbow Epic - 1 Pub</option>
-    <option value="fire">Feu Infernal - 1 Pub</option>
-    <option value="ice">Glace Cristal - 1 Pub</option>
+  <h1 style="color:#00ff88; font-size:36px; margin-bottom:20px;">snake-arena.io</h1>
+  <input id="name" placeholder="Nickname" value="Player" maxlength="15">
+  <br><select id="skin">
+    <option value="green">Green</option>
+    <option value="gold">Gold - Watch Ad</option>
+    <option value="rainbow">Rainbow - Watch Ad</option>
+    <option value="fire">Fire - Watch Ad</option>
+    <option value="ice">Ice - Watch Ad</option>
   </select>
-  <br><button onclick="start()">JOUER</button>
-  <p style="color:#888; font-size:15px; margin-top:20px;">Espace/Bouton = Boost | Mange pour grossir</p>
+  <br><button onclick="start()">Play</button>
 </div>
 <div id="hud">Score: <span id="score">0</span></div>
 <canvas id="minimap"></canvas>
-<div id="leaderboard"><b style="color:#2DD4BF; font-size:20px;">🏆 TOP 10</b><div id="leaders" style="margin-top:12px;"></div></div>
-<div id="killFeed"></div>
+<div id="leaderboard"><b style="color:#aaa;">Gagnants</b><div id="leaders" style="margin-top:8px;"></div></div>
+<div id="length">Votre longueur: <span id="len">15</span><br>Ton rang: <span id="rank">1</span></div>
 <div id="dead">
-  <h2 style="color:#ff4444; font-size:40px;">TU ES MORT</h2>
-  <p style="color:#fff; font-size:24px; margin:25px 0;">Score Final: <span id="finalScore">0</span></p>
-  <button onclick="reviveAd()" style="background:linear-gradient(135deg,#FFD700,#FFA500); margin-bottom:15px;">REVIVE +500 📺</button>
-  <br><button onclick="interstitialAd()" style="background:linear-gradient(135deg,#ff4444,#cc0000);">REJOUER 📺</button>
+  <h2 style="color:#fff; font-size:28px;">Game Over</h2>
+  <p style="color:#fff; font-size:18px; margin:20px 0;">Score: <span id="finalScore">0</span></p>
+  <button onclick="reviveAd()" style="background:#FFD700; margin-bottom:10px;">Continue 📺</button>
+  <br><button onclick="interstitialAd()">Play Again</button>
 </div>
 <div id="boost"></div>
 
 <script>
-const app = new PIXI.Application({ resizeTo: window, antialias: true, backgroundColor: 0x000011 });
+const app = new PIXI.Application({ resizeTo: window, antialias: true, backgroundColor: 0x161616 });
 document.body.prepend(app.view);
 const socket = io();
-let playerId = null, game = {players:{}, orbs:[]}, mouseAngle = 0, boosting = false, zoom = 1;
+let playerId = null, game = {players:{}, orbs:[]}, mouseAngle = 0, boosting = false;
 const world = new PIXI.Container();
 app.stage.addChild(world);
 
 const SKINS = {
-  cyan: { fill: 0x2DD4BF, glow: 0x1de9b6 },
-  gold: { fill: 0xFFD700, glow: 0xFFA500 },
-  rainbow: { fill: 0xFF00FF, glow: 0x00FFFF },
-  fire: { fill: 0xFF4444, glow: 0xFF8800 },
-  ice: { fill: 0x00FFFF, glow: 0x0088FF }
+  green: ['0x00ff00','0x00dd00'],
+  gold: ['0xFFD700','0xFFA500'],
+  rainbow: ['0xFF00FF','0x00FFFF'],
+  fire: ['0xFF4444','0xFF8800'],
+  ice: ['0x00FFFF','0x0088FF']
 };
 
-const stars = new PIXI.Graphics();
-for(let i = 0; i < 500; i++) {
-  stars.beginFill(0xffffff, Math.random()*0.5+0.3);
-  stars.drawCircle(Math.random()*5000, Math.random()*5000, Math.random()*2);
-  stars.endFill();
+// FOND HEXAGONES STYLE SLITHER
+const hexBg = new PIXI.Graphics();
+const hexSize = 25;
+for(let x = -100; x < 5100; x += hexSize * 1.5) {
+  for(let y = -100; y < 5100; y += hexSize * Math.sqrt(3)) {
+    const offsetX = (Math.floor(y / (hexSize * Math.sqrt(3))) % 2) * hexSize * 0.75;
+    drawHex(hexBg, x + offsetX, y, hexSize);
+  }
 }
-world.addChild(stars);
-
-const grid = new PIXI.Graphics();
-for(let i = 0; i < 5000; i += 50) {
-  grid.lineStyle(1, 0x2DD4BF, 0.08);
-  grid.moveTo(i, 0).lineTo(i, 5000);
-  grid.moveTo(0, i).lineTo(5000, i);
+function drawHex(g, x, y, size) {
+  g.lineStyle(1, 0x2a2a2a, 1);
+  g.beginFill(0x1e1e1e);
+  g.moveTo(x + size, y);
+  for(let i = 1; i <= 6; i++) {
+    g.lineTo(x + size * Math.cos(i * Math.PI / 3), y + size * Math.sin(i * Math.PI / 3));
+  }
+  g.endFill();
 }
-world.addChild(grid);
-
-const border = new PIXI.Graphics();
-border.lineStyle(10, 0xff0000, 0.5);
-border.drawRect(0, 0, 5000, 5000);
-world.addChild(border);
+world.addChild(hexBg);
 
 let deathCount = 0;
 window.ain = window.ain || { queue: [] };
@@ -91,10 +87,10 @@ ain.queue.push(() => ain.configAds({ siteId: 'YOUR_SITE_ID' }));
 
 function start() {
   const skin = document.getElementById('skin').value;
-  if (skin!== 'cyan') {
-    adinplay.displayRewardedAd(() => joinGame(skin), () => joinGame('cyan'));
+  if (skin!== 'green') {
+    adinplay.displayRewardedAd(() => joinGame(skin), () => joinGame('green'));
   } else {
-    joinGame('cyan');
+    joinGame('green');
   }
 }
 
@@ -105,6 +101,7 @@ function joinGame(skin) {
   document.getElementById('minimap').style.display = 'block';
   document.getElementById('leaderboard').style.display = 'block';
   document.getElementById('boost').style.display = 'block';
+  document.getElementById('length').style.display = 'block';
 }
 
 function reviveAd() {
@@ -129,11 +126,6 @@ socket.on('dead', (data) => {
   document.getElementById('finalScore').innerText = data.score;
   document.getElementById('dead').style.display = 'block';
 });
-socket.on('killFeed', (data) => {
-  const feed = document.getElementById('killFeed');
-  feed.innerHTML = `<div style="background:rgba(0,0,0,0.8); padding:10px 20px; border-radius:10px; margin:5px; border:2px solid #ff4444;"><span style="color:${data.killerColor}">${data.killer}</span> 💀 ${data.victim}</div>` + feed.innerHTML;
-  setTimeout(() => feed.innerHTML = '', 3000);
-});
 
 function updateAngle(x, y) {
   const dx = x - window.innerWidth/2;
@@ -149,118 +141,109 @@ document.getElementById('boost').addEventListener('touchstart', () => { boosting
 document.getElementById('boost').addEventListener('touchend', () => { boosting = false; socket.emit('boost', false); });
 window.addEventListener('keydown', (e) => { if(e.code==='Space') { boosting = true; socket.emit('boost', true); }});
 window.addEventListener('keyup', (e) => { if(e.code==='Space') { boosting = false; socket.emit('boost', false); }});
-setInterval(() => { if(playerId) socket.emit('move', mouseAngle); }, 50);
+setInterval(() => { if(playerId) socket.emit('move', mouseAngle); }, 33);
 
 const minimap = document.getElementById('minimap').getContext('2d');
-document.getElementById('minimap').width = 200;
-document.getElementById('minimap').height = 200;
+document.getElementById('minimap').width = 140;
+document.getElementById('minimap').height = 140;
 
 app.ticker.add(() => {
-  world.children.forEach(child => { if(child.isParticle) world.removeChild(child); });
+  // Garde le fond, supprime le reste
+  while(world.children.length > 1) world.removeChildAt(1);
 
+  // Orbes style Slither - petits ronds colorés
   game.orbs.forEach((orb, i) => {
     const g = new PIXI.Graphics();
-    g.beginFill(0x2DD4BF);
+    g.beginFill(0xffffff, 0.3);
+    g.drawCircle(orb.x, orb.y, orb.size + 2);
+    g.endFill();
+    g.beginFill(parseInt(orb.color.replace('hsl','0x').replace(/[()%\s]/g,'')));
     g.drawCircle(orb.x, orb.y, orb.size);
     g.endFill();
-    const glow = new PIXI.Graphics();
-    glow.beginFill(0x2DD4BF, 0.3);
-    glow.drawCircle(orb.x, orb.y, orb.size * 2.5);
-    glow.endFill();
-    world.addChild(glow, g);
+    world.addChild(g);
 
     if (game.players[playerId] &&!game.players[playerId].dead) {
       const p = game.players[playerId];
       if (Math.hypot(p.x - orb.x, p.y - orb.y) < p.size + orb.size) {
         socket.emit('eatOrb', i);
-        for(let j=0; j<5; j++) {
-          const particle = new PIXI.Graphics();
-          particle.isParticle = true;
-          particle.beginFill(0x2DD4BF);
-          particle.drawCircle(orb.x, orb.y, 3);
-          particle.endFill();
-          particle.vx = (Math.random()-0.5)*10;
-          particle.vy = (Math.random()-0.5)*10;
-          particle.life = 20;
-          world.addChild(particle);
-        }
       }
     }
   });
 
-  world.children.forEach(child => {
-    if(child.isParticle) {
-      child.x += child.vx;
-      child.y += child.vy;
-      child.alpha -= 0.05;
-      child.life--;
-      if(child.life <= 0) world.removeChild(child);
-    }
-  });
-
+  // Joueurs style Slither
   const sorted = Object.values(game.players).sort((a,b) => b.score - a.score);
   sorted.forEach(p => {
     if (p.dead) return;
-    const skin = SKINS[p.skin] || SKINS.cyan;
+    const colors = SKINS[p.skin] || SKINS.green;
     const g = new PIXI.Graphics();
 
-    g.lineStyle(p.size * 1.2, skin.glow, 0.2);
-    g.moveTo(p.x, p.y);
-    p.segments.forEach(s => g.lineTo(s.x, s.y));
+    // Corps - cercles qui se chevauchent
+    for(let i = p.segments.length - 1; i >= 0; i--) {
+      const seg = p.segments[i];
+      const size = p.size * (1 - i / p.segments.length * 0.4);
+      g.beginFill(colors[1]);
+      g.drawCircle(seg.x, seg.y, size);
+      g.endFill();
+      g.beginFill(colors[0]);
+      g.drawCircle(seg.x, seg.y, size * 0.8);
+      g.endFill();
+    }
 
-    g.lineStyle(p.size * 0.7, skin.fill);
-    g.moveTo(p.x, p.y);
-    p.segments.forEach(s => g.lineTo(s.x, s.y));
-
-    const headGlow = new PIXI.Graphics();
-    headGlow.beginFill(skin.glow, 0.4);
-    headGlow.drawCircle(p.x, p.y, p.size * 1.8);
-    headGlow.endFill();
-
-    g.beginFill(skin.fill);
+    // Tête
+    g.beginFill(colors[1]);
     g.drawCircle(p.x, p.y, p.size);
     g.endFill();
+    g.beginFill(colors[0]);
+    g.drawCircle(p.x, p.y, p.size * 0.8);
+    g.endFill();
 
-    const eyeDist = p.size * 0.4;
-    const eyeSize = p.size * 0.25;
+    // Yeux style Slither - gros yeux blancs
+    const eyeDist = p.size * 0.5;
+    const eyeSize = p.size * 0.35;
     g.beginFill(0xffffff);
-    g.drawCircle(p.x + Math.cos(p.angle)*eyeDist - Math.sin(p.angle)*eyeSize, p.y + Math.sin(p.angle)*eyeDist + Math.cos(p.angle)*eyeSize, eyeSize);
-    g.drawCircle(p.x + Math.cos(p.angle)*eyeDist + Math.sin(p.angle)*eyeSize, p.y + Math.sin(p.angle)*eyeDist - Math.cos(p.angle)*eyeSize, eyeSize);
+    g.drawCircle(p.x + Math.cos(p.angle + 0.5)*eyeDist, p.y + Math.sin(p.angle + 0.5)*eyeDist, eyeSize);
+    g.drawCircle(p.x + Math.cos(p.angle - 0.5)*eyeDist, p.y + Math.sin(p.angle - 0.5)*eyeDist, eyeSize);
     g.endFill();
     g.beginFill(0x000000);
-    g.drawCircle(p.x + Math.cos(p.angle)*eyeDist - Math.sin(p.angle)*eyeSize, p.y + Math.sin(p.angle)*eyeDist + Math.cos(p.angle)*eyeSize, eyeSize*0.5);
-    g.drawCircle(p.x + Math.cos(p.angle)*eyeDist + Math.sin(p.angle)*eyeSize, p.y + Math.sin(p.angle)*eyeDist - Math.cos(p.angle)*eyeSize, eyeSize*0.5);
+    g.drawCircle(p.x + Math.cos(p.angle + 0.5)*eyeDist, p.y + Math.sin(p.angle + 0.5)*eyeDist, eyeSize*0.5);
+    g.drawCircle(p.x + Math.cos(p.angle - 0.5)*eyeDist, p.y + Math.sin(p.angle - 0.5)*eyeDist, eyeSize*0.5);
     g.endFill();
 
-    world.addChild(headGlow, g);
+    world.addChild(g);
 
-    const text = new PIXI.Text(p.name, {fontSize: 14, fill: 0xffffff, stroke: 0x000000, strokeThickness: 5, fontWeight: '900'});
+    // Nom
+    const text = new PIXI.Text(p.name, {fontSize: 12, fill: 0xffffff, stroke: 0x000000, strokeThickness: 3, fontWeight: 'bold'});
     text.x = p.x - text.width/2;
-    text.y = p.y - p.size - 25;
+    text.y = p.y - p.size - 20;
     world.addChild(text);
 
     if (p.id === playerId) {
-      zoom = Math.max(0.5, 1 - p.size/1000);
-      world.scale.set(zoom);
-      world.x = -p.x * zoom + window.innerWidth/2;
-      world.y = -p.y * zoom + window.innerHeight/2;
+      // Caméra fluide
+      world.x += (-p.x + window.innerWidth/2 - world.x) * 0.15;
+      world.y += (-p.y + window.innerHeight/2 - world.y) * 0.15;
       document.getElementById('score').innerText = p.score;
+      document.getElementById('len').innerText = Math.floor(p.size);
+      document.getElementById('rank').innerText = sorted.indexOf(p) + 1;
 
-      minimap.clearRect(0,0,200,200);
-      minimap.fillStyle = 'rgba(0,0,0,0.6)';
-      minimap.fillRect(0,0,200,200);
+      // Minimap ronde
+      minimap.clearRect(0,0,140,140);
+      minimap.fillStyle = 'rgba(0,0,0,0.3)';
+      minimap.beginPath();
+      minimap.arc(70,70,70,0,7);
+      minimap.fill();
       Object.values(game.players).forEach(pl => {
         if (pl.dead) return;
-        minimap.fillStyle = pl.id === playerId? '#2DD4BF' : '#ff4444';
+        minimap.fillStyle = pl.id === playerId? '#00ff88' : '#ff4444';
         minimap.beginPath();
-        minimap.arc(pl.x/5000*200, pl.y/5000*200, pl.id === playerId? 5:3, 0, 7);
+        minimap.arc(70 + (pl.x-2500)/5000*140, 70 + (pl.y-2500)/5000*140, pl.id === playerId? 3:2, 0, 7);
         minimap.fill();
       });
     }
   });
 
+  // Leaderboard style Slither
   document.getElementById('leaders').innerHTML = sorted.filter(p=>!p.dead).slice(0,10).map((p,i) =>
-    `<div style="color:${p.id===playerId?'#2DD4BF':'#fff'}; font-size:14px; margin:4px 0; font-weight:bold;">${i+1}. ${p.name} - ${p.score}</div>`
+    `<div style="color:${i<3?'#ff4444':'#aaa'}; font-size:12px; margin:2px 0;">#${i+1} ${p.name.substring(0,10)} - ${p.score}</div>`
   ).join('');
 });
 </script>
