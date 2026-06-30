@@ -54,7 +54,7 @@ const app = new PIXI.Application({ resizeTo: window, antialias: true, background
 document.body.prepend(app.view);
 
 const socket = io();
-let playerId = null, players = {}, orbs = [], camera = {x: 0, y: 0};
+let playerId = null, players = {}, orbs = [];
 let mouseAngle = 0, isBoosting = false;
 const world = new PIXI.Container();
 app.stage.addChild(world);
@@ -122,15 +122,18 @@ app.ticker.add(() => {
   world.removeChildren();
   world.addChild(grid);
 
+  // DESSIN DES ORBES/SNACKS - VERSION QUI MARCHE
   orbs.forEach((orb, i) => {
     const g = new PIXI.Graphics();
-    g.beginFill(parseInt(orb.color.replace('hsl','0x').split(',')[0]));
+    g.beginFill(0x2DD4BF); // Cyan
     g.drawCircle(orb.x, orb.y, orb.size);
     g.endFill();
     world.addChild(g);
     if (players[playerId]) {
       const p = players[playerId];
-      if (Math.hypot(p.x - orb.x, p.y - orb.y) < p.size + orb.size) socket.emit('eatOrb', i);
+      if (Math.hypot(p.x - orb.x, p.y - orb.y) < p.size + orb.size) {
+        socket.emit('eatOrb', i);
+      }
     }
   });
 
