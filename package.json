@@ -1,12 +1,11 @@
-{
-  "name": "snake-arena-io",
-  "version": "1.0.0",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.7.2"
-  }
+// Dans socket.on('join'
+speed: 10, // AVANT: 3
+
+// Dans setInterval pour les joueurs
+if (p.boost && p.score > 10) {
+  p.speed = 20; // AVANT: 6
+  p.score -= 0.8;
+  p.size = Math.max(15, p.size - 0.03);
+} else {
+  p.speed = 10; // AVANT: 3
 }
