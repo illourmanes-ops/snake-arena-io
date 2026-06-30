@@ -6,42 +6,77 @@
 <title>Snake Arena.IO</title>
 <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"></script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="https://cdn.adinplay.com/ads.js"></script>
 <style>
   body { margin:0; overflow:hidden; background:#0a0015; font-family:Arial; }
   #menu { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:#1a0033; padding:30px; border-radius:20px; border:2px solid #2DD4BF; text-align:center; }
-  input { padding:12px; border-radius:10px; border:2px solid #2DD4BF; margin:10px; background:#0a0015; color:#fff; }
-  button { padding:15px 40px; background:#2DD4BF; border:none; border-radius:10px; font-weight:bold; cursor:pointer; }
-  #hud { position:absolute; top:15px; left:15px; color:#fff; font-size:24px; font-weight:bold; display:none; }
+  input,select { padding:12px; border-radius:10px; border:2px solid #2DD4BF; margin:10px; background:#0a0015; color:#fff; }
+  button { padding:15px 40px; background:#2DD4BF; border:none; border-radius:10px; font-weight:bold; cursor:pointer; margin:5px; }
+  #hud { position:absolute; top:15px; left:15px; color:#fff; font-size:24px; font-weight:bold; display:none; text-shadow:2px 2px #000; }
+  #minimap { position:absolute; bottom:15px; right:15px; width:150px; height:150px; background:rgba(0,0,0,0.6); border:2px solid #2DD4BF; border-radius:10px; display:none; }
+  #dead { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:#1a0033; padding:40px; border-radius:20px; border:2px solid #ff4444; text-align:center; display:none; }
+  #leaderboard { position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.6); padding:15px; border-radius:15px; color:#fff; border:2px solid #2DD4BF; display:none; }
 </style>
 </head>
 <body>
 <div id="menu">
   <h1 style="color:#2DD4BF;">🐍 Snake Arena.IO</h1>
-  <input id="name" placeholder="Pseudo" value="Player">
+  <input id="name" placeholder="Pseudo" value="Player" maxlength="12">
+  <br>
+  <select id="skin">
+    <option value="cyan">Cyan Gratuit</option>
+    <option value="gold">Or - Regarde 1 Pub</option>
+    <option value="rainbow">Rainbow - Regarde 1 Pub</option>
+  </select>
   <br><button onclick="start()">JOUER</button>
+  <p style="color:#888; font-size:12px;">Espace = Boost</p>
 </div>
 <div id="hud">Score: <span id="score">0</span></div>
+<canvas id="minimap"></canvas>
+<div id="leaderboard"><b>🏆 TOP 10</b><div id="leaders"></div></div>
+<div id="dead">
+  <h2 style="color:#ff4444;">T'ES MORT</h2>
+  <p style="color:#fff;">Score: <span id="finalScore">0</span></p>
+  <button onclick="reviveAd()" style="background:#FFD700;">REVIVE +300 📺</button>
+  <br><button onclick="location.reload()">REJOUER</button>
+</div>
 
 <script>
 const app = new PIXI.Application({ resizeTo: window, backgroundColor: 0x0a0015 });
 document.body.prepend(app.view);
 const socket = io();
-let playerId = null, game = {players:{}, orbs:[]}, mouseAngle = 0;
+let playerId = null, game = {players:{}, orbs:[]}, mouseAngle = 0, boosting = false;
 const world = new PIXI.Container();
 app.stage.addChild(world);
+const SKINS = { cyan: 0x2DD4BF, gold: 0xFFD700, rainbow: 0xFF00FF };
 
-// Grille
-const grid = new PIXI.Graphics();
-for(let i = 0; i < 5000; i += 50) {
-  grid.lineStyle(1, 0x1a0033, 0.3);
-  grid.moveTo(i, 0).lineTo(i, 5000);
-  grid.moveTo(0, i).lineTo(5000, i);
-}
+window.ain = window.ain || { queue: [] };
+ain.queue.push(() => ain.configAds({ siteId: 'YOUR_SITE_ID' }));
 
 function start() {
-  socket.emit('join', { name: document.getElementById('name').value });
+  const skin = document.getElementById('skin').value;
+  if (skin!== 'cyan') {
+    adinplay.displayRewardedAd(() => {
+      joinGame(skin);
+    }, () => joinGame('cyan'));
+  } else {
+    joinGame('cyan');
+  }
+}
+
+function joinGame(skin) {
+  socket.emit('join', { name: document.getElementById('name').value, skin });
   document.getElementById('menu').style.display = 'none';
   document.getElementById('hud').style.display = 'block';
+  document.getElementById('minimap').style.display = 'block';
+  document.getElementById('leaderboard').style.display = 'block';
+}
+
+function reviveAd() {
+  adinplay.displayRewardedAd(() => {
+    socket.emit('revive');
+    document.getElementById('dead').style.display = 'none';
+  });
 }
 
 socket.on('init', (id) => playerId = id);
@@ -52,17 +87,16 @@ app.view.onmousemove = (e) => {
   const dy = e.clientY - window.innerHeight/2;
   mouseAngle = Math.atan2(dy, dx);
 };
-app.view.ontouchmove = (e) => {
-  const t = e.touches[0];
-  const dx = t.clientX - window.innerWidth/2;
-  const dy = t.clientY - window.innerHeight/2;
-  mouseAngle = Math.atan2(dy, dx);
-};
+window.onkeydown = (e) => { if(e.code==='Space') boosting = true; socket.emit('boost', true); };
+window.onkeyup = (e) => { if(e.code==='Space') boosting = false; socket.emit('boost', false); };
 setInterval(() => { if(playerId) socket.emit('move', mouseAngle); }, 50);
+
+const minimap = document.getElementById('minimap').getContext('2d');
+document.getElementById('minimap').width = 150;
+document.getElementById('minimap').height = 150;
 
 app.ticker.add(() => {
   world.removeChildren();
-  world.addChild(grid);
 
   // Orbes
   game.orbs.forEach((orb, i) => {
@@ -80,26 +114,46 @@ app.ticker.add(() => {
     }
   });
 
-  // Joueurs
-  for (let id in game.players) {
-    const p = game.players[id];
+  // Joueurs + Bots
+  const sorted = Object.values(game.players).sort((a,b) => b.score - a.score);
+  sorted.forEach(p => {
     const g = new PIXI.Graphics();
-    g.beginFill(0x00FFFF);
+    const col = SKINS[p.skin] || 0x2DD4BF;
+    g.beginFill(col);
     g.drawCircle(p.x, p.y, p.size);
     g.endFill();
     if (p.segments.length > 1) {
-      g.lineStyle(p.size * 0.6, 0x00FFFF);
+      g.lineStyle(p.size * 0.6, col);
       g.moveTo(p.x, p.y);
       p.segments.forEach(s => g.lineTo(s.x, s.y));
     }
     world.addChild(g);
 
-    if (id === playerId) {
+    const text = new PIXI.Text(p.name, {fontSize: 12, fill: 0xffffff, stroke: 0x000000, strokeThickness: 3});
+    text.x = p.x - text.width/2;
+    text.y = p.y - p.size - 15;
+    world.addChild(text);
+
+    if (p.id === playerId) {
       world.x = -p.x + window.innerWidth/2;
       world.y = -p.y + window.innerHeight/2;
       document.getElementById('score').innerText = p.score;
+
+      // Minimap
+      minimap.clearRect(0,0,150,150);
+      minimap.fillStyle = '#000';
+      minimap.fillRect(0,0,150,150);
+      Object.values(game.players).forEach(pl => {
+        minimap.fillStyle = pl.id === playerId? '#2DD4BF' : '#ff0000';
+        minimap.fillRect(pl.x/5000*150, pl.y/5000*150, 3, 3);
+      });
     }
-  }
+  });
+
+  // Leaderboard
+  document.getElementById('leaders').innerHTML = sorted.slice(0,10).map((p,i) =>
+    `<div style="color:${p.id===playerId?'#2DD4BF':'#fff'}; font-size:12px;">${i+1}. ${p.name} - ${p.score}</div>`
+  ).join('');
 });
 </script>
 </body>
