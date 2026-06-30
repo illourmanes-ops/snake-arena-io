@@ -29,19 +29,23 @@ io.on('connection', (socket) => {
 
   // Nouveau joueur
   socket.on('join', (data) => {
+  socket.on('join', (data) => {
     rooms[currentRoom].players[socket.id] = {
       id: socket.id,
-      x: Math.random() * MAP_SIZE,
-      y: Math.random() * MAP_SIZE,
+      x: MAP_SIZE/2 + Math.random()*200-100,
+      y: MAP_SIZE/2 + Math.random()*200-100,
       angle: 0,
-      segments: [{x: 0, y: 0}],
-      size: 10,
+      segments: [],
+      size: 12,
       score: 0,
-      name: data.name || 'Anon',
-      skin: data.skin || 'Classique',
-      speed: 2
+      name: data.name.substring(0,12) || 'Anon',
+      speed: 2.5,
+      color: data.color || `hsl(${Math.random()*360},100%,50%)`
     };
     socket.join(currentRoom);
+
+    // LIGNE MAGIQUE : envoie les orbes direct au joueur
+    socket.emit('state', rooms[currentRoom]);
   });
 
   // Mouvement
