@@ -2,53 +2,76 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Snake Arena.IO</title>
 <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"></script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="https://cdn.adinplay.com/ads.js"></script>
 <style>
-  body { margin:0; overflow:hidden; background:#0a0015; font-family:Arial; }
-  #menu { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:#1a0033; padding:30px; border-radius:20px; border:2px solid #2DD4BF; text-align:center; }
-  input,select { padding:12px; border-radius:10px; border:2px solid #2DD4BF; margin:10px; background:#0a0015; color:#fff; }
-  button { padding:15px 40px; background:#2DD4BF; border:none; border-radius:10px; font-weight:bold; cursor:pointer; margin:5px; }
-  #hud { position:absolute; top:15px; left:15px; color:#fff; font-size:24px; font-weight:bold; display:none; text-shadow:2px 2px #000; }
-  #minimap { position:absolute; bottom:15px; right:15px; width:150px; height:150px; background:rgba(0,0,0,0.6); border:2px solid #2DD4BF; border-radius:10px; display:none; }
-  #dead { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:#1a0033; padding:40px; border-radius:20px; border:2px solid #ff4444; text-align:center; display:none; }
-  #leaderboard { position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.6); padding:15px; border-radius:15px; color:#fff; border:2px solid #2DD4BF; display:none; }
+  body { margin:0; overflow:hidden; background:#0a0015; font-family:Arial; touch-action:none; }
+  #menu { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:linear-gradient(135deg,#1a0033,#2a0055); padding:40px; border-radius:25px; border:3px solid #2DD4BF; text-align:center; box-shadow:0 0 40px #2DD4BF50; }
+  input,select { padding:15px; border-radius:12px; border:2px solid #2DD4BF; margin:10px; background:#0a0015; color:#fff; font-size:16px; width:200px; }
+  button { padding:18px 50px; background:linear-gradient(135deg,#2DD4BF,#1de9b6); border:none; border-radius:12px; font-weight:bold; cursor:pointer; font-size:18px; color:#000; box-shadow:0 5px 15px #2DD4BF50; }
+  button:active { transform:scale(0.95); }
+  #hud { position:absolute; top:20px; left:20px; color:#fff; font-size:28px; font-weight:bold; display:none; text-shadow:0 0 10px #2DD4BF; }
+  #minimap { position:absolute; bottom:20px; right:20px; width:180px; height:180px; background:rgba(0,0,0,0.7); border:3px solid #2DD4BF; border-radius:15px; display:none; box-shadow:0 0 20px #2DD4BF50; }
+  #dead { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:linear-gradient(135deg,#1a0033,#330000); padding:40px; border-radius:25px; border:3px solid #ff4444; text-align:center; display:none; box-shadow:0 0 40px #ff444450; }
+  #leaderboard { position:absolute; top:20px; right:20px; background:rgba(0,0,0,0.7); padding:20px; border-radius:15px; color:#fff; border:3px solid #2DD4BF; display:none; min-width:200px; box-shadow:0 0 20px #2DD4BF50; }
+  #boost { position:absolute; bottom:20px; left:20px; width:80px; height:80px; border-radius:50%; background:rgba(45,212,191,0.3); border:3px solid #2DD4BF; display:none; }
 </style>
 </head>
 <body>
 <div id="menu">
-  <h1 style="color:#2DD4BF;">🐍 Snake Arena.IO</h1>
+  <h1 style="color:#2DD4BF; font-size:36px; margin-bottom:20px; text-shadow:0 0 20px #2DD4BF;">🐍 Snake Arena.IO</h1>
   <input id="name" placeholder="Pseudo" value="Player" maxlength="12">
   <br>
   <select id="skin">
-    <option value="cyan">Cyan Gratuit</option>
-    <option value="gold">Or - Regarde 1 Pub</option>
-    <option value="rainbow">Rainbow - Regarde 1 Pub</option>
+    <option value="cyan">Cyan Néon</option>
+    <option value="gold">Or Epic - Pub</option>
+    <option value="rainbow">Rainbow - Pub</option>
   </select>
   <br><button onclick="start()">JOUER</button>
-  <p style="color:#888; font-size:12px;">Espace = Boost</p>
+  <p style="color:#888; font-size:14px; margin-top:15px;">Espace ou Bouton = Boost</p>
 </div>
 <div id="hud">Score: <span id="score">0</span></div>
 <canvas id="minimap"></canvas>
-<div id="leaderboard"><b>🏆 TOP 10</b><div id="leaders"></div></div>
+<div id="leaderboard"><b style="color:#2DD4BF; font-size:18px;">🏆 TOP 10</b><div id="leaders" style="margin-top:10px;"></div></div>
 <div id="dead">
-  <h2 style="color:#ff4444;">T'ES MORT</h2>
-  <p style="color:#fff;">Score: <span id="finalScore">0</span></p>
-  <button onclick="reviveAd()" style="background:#FFD700;">REVIVE +300 📺</button>
+  <h2 style="color:#ff4444; font-size:32px;">T'ES MORT</h2>
+  <p style="color:#fff; font-size:20px; margin:20px 0;">Score: <span id="finalScore">0</span></p>
+  <button onclick="reviveAd()" style="background:linear-gradient(135deg,#FFD700,#FFA500); margin-bottom:10px;">REVIVE +300 📺</button>
   <br><button onclick="location.reload()">REJOUER</button>
 </div>
+<div id="boost"></div>
 
 <script>
-const app = new PIXI.Application({ resizeTo: window, backgroundColor: 0x0a0015 });
+const app = new PIXI.Application({ resizeTo: window, antialias: true, backgroundColor: 0x0a0015 });
 document.body.prepend(app.view);
 const socket = io();
 let playerId = null, game = {players:{}, orbs:[]}, mouseAngle = 0, boosting = false;
 const world = new PIXI.Container();
 app.stage.addChild(world);
-const SKINS = { cyan: 0x2DD4BF, gold: 0xFFD700, rainbow: 0xFF00FF };
+
+const SKINS = {
+  cyan: { fill: 0x2DD4BF, glow: 0x2DD4BF },
+  gold: { fill: 0xFFD700, glow: 0xFFA500 },
+  rainbow: { fill: 0xFF00FF, glow: 0x00FFFF }
+};
+
+// Fond dégradé + grille néon
+const bg = new PIXI.Graphics();
+bg.beginFill(0x0a0015);
+bg.drawRect(0, 0, 5000, 5000);
+bg.endFill();
+world.addChild(bg);
+
+const grid = new PIXI.Graphics();
+for(let i = 0; i < 5000; i += 50) {
+  grid.lineStyle(1, 0x2DD4BF, 0.1);
+  grid.moveTo(i, 0).lineTo(i, 5000);
+  grid.moveTo(0, i).lineTo(5000, i);
+}
+world.addChild(grid);
 
 window.ain = window.ain || { queue: [] };
 ain.queue.push(() => ain.configAds({ siteId: 'YOUR_SITE_ID' }));
@@ -56,9 +79,7 @@ ain.queue.push(() => ain.configAds({ siteId: 'YOUR_SITE_ID' }));
 function start() {
   const skin = document.getElementById('skin').value;
   if (skin!== 'cyan') {
-    adinplay.displayRewardedAd(() => {
-      joinGame(skin);
-    }, () => joinGame('cyan'));
+    adinplay.displayRewardedAd(() => joinGame(skin), () => joinGame('cyan'));
   } else {
     joinGame('cyan');
   }
@@ -70,6 +91,7 @@ function joinGame(skin) {
   document.getElementById('hud').style.display = 'block';
   document.getElementById('minimap').style.display = 'block';
   document.getElementById('leaderboard').style.display = 'block';
+  document.getElementById('boost').style.display = 'block';
 }
 
 function reviveAd() {
@@ -81,30 +103,54 @@ function reviveAd() {
 
 socket.on('init', (id) => playerId = id);
 socket.on('state', (g) => game = g);
+socket.on('dead', (data) => {
+  document.getElementById('finalScore').innerText = data.score;
+  document.getElementById('dead').style.display = 'block';
+});
 
-app.view.onmousemove = (e) => {
-  const dx = e.clientX - window.innerWidth/2;
-  const dy = e.clientY - window.innerHeight/2;
+// FIX CONTRÔLE SOURIS + TACTILE
+function updateAngle(x, y) {
+  const dx = x - window.innerWidth/2;
+  const dy = y - window.innerHeight/2;
   mouseAngle = Math.atan2(dy, dx);
-};
-window.onkeydown = (e) => { if(e.code==='Space') boosting = true; socket.emit('boost', true); };
-window.onkeyup = (e) => { if(e.code==='Space') boosting = false; socket.emit('boost', false); };
+}
+
+app.view.addEventListener('mousemove', (e) => updateAngle(e.clientX, e.clientY));
+app.view.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  updateAngle(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: false });
+
+app.view.addEventListener('touchstart', () => { boosting = true; socket.emit('boost', true); });
+app.view.addEventListener('touchend', () => { boosting = false; socket.emit('boost', false); });
+document.getElementById('boost').addEventListener('touchstart', () => { boosting = true; socket.emit('boost', true); });
+document.getElementById('boost').addEventListener('touchend', () => { boosting = false; socket.emit('boost', false); });
+
+window.addEventListener('keydown', (e) => { if(e.code==='Space') { boosting = true; socket.emit('boost', true); }});
+window.addEventListener('keyup', (e) => { if(e.code==='Space') { boosting = false; socket.emit('boost', false); }});
+
 setInterval(() => { if(playerId) socket.emit('move', mouseAngle); }, 50);
 
 const minimap = document.getElementById('minimap').getContext('2d');
-document.getElementById('minimap').width = 150;
-document.getElementById('minimap').height = 150;
+document.getElementById('minimap').width = 180;
+document.getElementById('minimap').height = 180;
 
 app.ticker.add(() => {
   world.removeChildren();
+  world.addChild(bg, grid);
 
-  // Orbes
+  // Orbes avec glow
   game.orbs.forEach((orb, i) => {
     const g = new PIXI.Graphics();
     g.beginFill(0x2DD4BF);
     g.drawCircle(orb.x, orb.y, orb.size);
     g.endFill();
-    world.addChild(g);
+    // Glow
+    const glow = new PIXI.Graphics();
+    glow.beginFill(0x2DD4BF, 0.3);
+    glow.drawCircle(orb.x, orb.y, orb.size * 2);
+    glow.endFill();
+    world.addChild(glow, g);
 
     if (game.players[playerId]) {
       const p = game.players[playerId];
@@ -114,24 +160,45 @@ app.ticker.add(() => {
     }
   });
 
-  // Joueurs + Bots
+  // Joueurs avec corps + glow + tête
   const sorted = Object.values(game.players).sort((a,b) => b.score - a.score);
   sorted.forEach(p => {
+    const skin = SKINS[p.skin] || SKINS.cyan;
     const g = new PIXI.Graphics();
-    const col = SKINS[p.skin] || 0x2DD4BF;
-    g.beginFill(col);
-    g.drawCircle(p.x, p.y, p.size);
-    g.endFill();
+
+    // Glow du corps
     if (p.segments.length > 1) {
-      g.lineStyle(p.size * 0.6, col);
+      g.lineStyle(p.size * 0.8, skin.glow, 0.4);
       g.moveTo(p.x, p.y);
       p.segments.forEach(s => g.lineTo(s.x, s.y));
     }
-    world.addChild(g);
 
-    const text = new PIXI.Text(p.name, {fontSize: 12, fill: 0xffffff, stroke: 0x000000, strokeThickness: 3});
+    // Corps
+    g.lineStyle(p.size * 0.6, skin.fill);
+    g.moveTo(p.x, p.y);
+    p.segments.forEach(s => g.lineTo(s.x, s.y));
+
+    // Tête avec glow
+    const headGlow = new PIXI.Graphics();
+    headGlow.beginFill(skin.glow, 0.5);
+    headGlow.drawCircle(p.x, p.y, p.size * 1.5);
+    headGlow.endFill();
+
+    g.beginFill(skin.fill);
+    g.drawCircle(p.x, p.y, p.size);
+    g.endFill();
+
+    // Yeux
+    g.beginFill(0x000000);
+    g.drawCircle(p.x + Math.cos(p.angle)*p.size*0.5, p.y + Math.sin(p.angle)*p.size*0.5, p.size*0.2);
+    g.endFill();
+
+    world.addChild(headGlow, g);
+
+    // Nom
+    const text = new PIXI.Text(p.name, {fontSize: 14, fill: 0xffffff, stroke: 0x000000, strokeThickness: 4, fontWeight: 'bold'});
     text.x = p.x - text.width/2;
-    text.y = p.y - p.size - 15;
+    text.y = p.y - p.size - 20;
     world.addChild(text);
 
     if (p.id === playerId) {
@@ -140,19 +207,21 @@ app.ticker.add(() => {
       document.getElementById('score').innerText = p.score;
 
       // Minimap
-      minimap.clearRect(0,0,150,150);
-      minimap.fillStyle = '#000';
-      minimap.fillRect(0,0,150,150);
+      minimap.clearRect(0,0,180,180);
+      minimap.fillStyle = 'rgba(0,0,0,0.5)';
+      minimap.fillRect(0,0,180,180);
       Object.values(game.players).forEach(pl => {
-        minimap.fillStyle = pl.id === playerId? '#2DD4BF' : '#ff0000';
-        minimap.fillRect(pl.x/5000*150, pl.y/5000*150, 3, 3);
+        minimap.fillStyle = pl.id === playerId? '#2DD4BF' : '#ff4444';
+        minimap.beginPath();
+        minimap.arc(pl.x/5000*180, pl.y/5000*180, pl.id === playerId? 4:2, 0, 7);
+        minimap.fill();
       });
     }
   });
 
   // Leaderboard
   document.getElementById('leaders').innerHTML = sorted.slice(0,10).map((p,i) =>
-    `<div style="color:${p.id===playerId?'#2DD4BF':'#fff'}; font-size:12px;">${i+1}. ${p.name} - ${p.score}</div>`
+    `<div style="color:${p.id===playerId?'#2DD4BF':'#fff'}; font-size:13px; margin:3px 0;">${i+1}. ${p.name} - ${p.score}</div>`
   ).join('');
 });
 </script>
