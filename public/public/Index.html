@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🐍 Snake Arena.IO</title>
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="https://cdn.adinplay.com/ads.js"></script>
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+  body { overflow:hidden; background:#0a0015; font-family:Arial; }
+  #ui { position:absolute; inset:0; pointer-events:none; }
+  #menu { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+          background:#1a0033; padding:30px; border-radius:20px; border:2px solid #2DD4BF;
+          text-align:center; pointer-events:all; }
+  input { padding:12px; border-radius:10px; border:2px solid #2DD4BF; margin:10px;
+          width:220px; background:#0a0015; color:#fff; font-size:16px; }
+  button { padding:15px 40px; background:#2DD4BF; border:none; border-radius:10px;
+           font-size:18px; font-weight:bold; cursor:pointer; color:#000; }
+  button:active { transform:scale(0.95); }
+  #hud { position:absolute; top:15px; left:15px; color:#fff; font-size:24px;
+         font-weight:bold; text-shadow:2px 2px #000; }
+  #leaderboard { position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.6);
+                 padding:15px; border-radius:15px; color:#fff; min-width:180px;
+                 border:2px solid #2DD4BF; }
+  #killFeed { position:absolute; bottom:15px; left:15px; color:#ff4444; font-weight:bold; }
+  #deadScreen { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+                background:#1a0033; padding:40px; border-radius:20px; border:2px solid #ff4444;
+                text-align:center; display:none; pointer-events:all; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <div id="menu">
+    <h1 style="color:#2DD4BF; margin-bottom:20px;">🐍 Snake Arena.IO</h1>
+    <input id="nameInput" placeholder="Pseudo" maxlength="12" value="Player">
+    <br><button onclick="startGame()">JOUER</button>
+    <p style="color:#888; font-size:14px; margin-top:15px;">100 joueurs en temps réel</p>
+  </div>
+  <div id="hud" style="display:none;">Score: <span id="score">0</span></div>
+  <div id="leaderboard" style="display:none;"><b>🏆 TOP 10</b><div id="leaders" style="margin-top:10px;"></div></div>
+  <div id="killFeed"></div>
+  <div id="deadScreen">
+    <h2 style="color:#ff4444;">T'ES MORT</h2>
+    <p style="color:#fff; margin:20px 0;">Score: <span id="finalScore">0</span></p>
+    <button onclick="showReviveAd()" style="background:#FFD700; margin-bottom:10px;">REVIVE +300 MASS 📺</button>
+    <br><button onclick="location.reload()">REJOUER</button>
+  </div>
+</div>
+
+<script>
+const app = new PIXI.Application({ resizeTo: window, antialias: true, backgroundColor: 0x0a0015 });
+document.body.prepend(app.view);
+
+const socket = io();
+let playerId = null, players = {}, orbs = [], camera = {x: 0, y: 0};
+let mouseAngle = 0, isBoosting = false;
+const world = new PIXI.Container();
+app.stage.addChild(world);
+
+const grid = new PIXI.Graphics();
+for(let i = 0; i < 5000; i += 50) {
+  grid.lineStyle(1, 0x1a0033, 0.5);
+  grid.moveTo(i, 0).lineTo(i, 5000);
+  grid.moveTo(0, i).lineTo(5000, i);
+}
+world.addChild(grid);
+
+window.ain = window.ain || { queue: [] };
+ain.queue.push(() => ain.configAds({ siteId: 'YOUR_SITE_ID' }));
+
+function startGame() {
+  const name = document.getElementById('nameInput').value;
+  socket.emit('join', { name, color: `hsl(${Math.random()*360},100%,50%)` });
+  document.getElementById('menu').style.display = 'none';
+  document.getElementById('hud').style.display = 'block';
+  document.getElementById('leaderboard').style.display = 'block';
+}
+
+socket.on('connect', () => playerId = socket.id);
+socket.on('state', (state) => { players = state.players; orbs = state.orbs; });
+socket.on('dead', (data) => {
+  document.getElementById('finalScore').innerText = data.score;
+  document.getElementById('deadScreen').style.display = 'block';
+});
+socket.on('killFeed', (data) => {
+  const feed = document.getElementById('killFeed');
+  feed.innerHTML = `<span style="color:${data.killerColor}">${data.killer}</span> 💀 ${data.victim}<br>` + feed.innerHTML;
+  setTimeout(() => feed.innerHTML = '', 4000);
+});
+
+function showReviveAd() {
+  if (typeof adinplay === 'undefined') { alert('Pubs en chargement...'); return; }
+  adinplay.displayRewardedAd(() => {
+    socket.emit('revive');
+    document.getElementById('deadScreen').style.display = 'none';
+  }, () => alert('Pub non dispo'));
+}
+
+app.view.addEventListener('mousemove', (e) => {
+  const dx = e.clientX - window.innerWidth/2;
+  const dy = e.clientY - window.innerHeight/2;
+  mouseAngle = Math.atan2(dy, dx);
+});
+app.view.addEventListener('touchmove', (e) => {
+  const t = e.touches[0];
+  const dx = t.clientX - window.innerWidth/2;
+  const dy = t.clientY - window.innerHeight/2;
+  mouseAngle = Math.atan2(dy, dx);
+});
+window.addEventListener('keydown', e => { if (e.code === 'Space') isBoosting = true; });
+window.addEventListener('keyup', e => { if (e.code === 'Space') isBoosting = false; });
+setInterval(() => {
+  if (players[playerId]) {
+    socket.emit('move', mouseAngle);
+    socket.emit('boost', isBoosting);
+  }
+}, 50);
+
+app.ticker.add(() => {
+  world.removeChildren();
+  world.addChild(grid);
+
+  orbs.forEach((orb, i) => {
+    const g = new PIXI.Graphics();
+    g.beginFill(parseInt(orb.color.replace('hsl','0x').split(',')[0]));
+    g.drawCircle(orb.x, orb.y, orb.size);
+    g.endFill();
+    world.addChild(g);
+    if (players[playerId]) {
+      const p = players[playerId];
+      if (Math.hypot(p.x - orb.x, p.y - orb.y) < p.size + orb.size) socket.emit('eatOrb', i);
+    }
+  });
+
+  const sorted = Object.values(players).sort((a,b) => b.score - a.score);
+  sorted.forEach(p => {
+    const g = new PIXI.Graphics();
+    const col = parseInt(p.color.replace('hsl','0x').split(',')[0]);
+    g.beginFill(col);
+    g.drawCircle(p.x, p.y, p.size);
+    g.endFill();
+    g.lineStyle(p.size * 0.8, col);
+    g.moveTo(p.x, p.y);
+    p.segments.forEach(seg => g.lineTo(seg.x, seg.y));
+    world.addChild(g);
+    const text = new PIXI.Text(p.name, {fontSize: 14, fill: 0xffffff, stroke: 0x000000, strokeThickness: 3});
+    text.x = p.x - text.width/2;
+    text.y = p.y - p.size - 20;
+    world.addChild(text);
+
+    if (p.id === playerId) {
+      Object.values(players).forEach(other => {
+        if (other.id === p.id) return;
+        other.segments.forEach(seg => {
+          if (Math.hypot(p.x - seg.x, p.y - seg.y) < p.size * 0.8) socket.emit('died', other.id);
+        });
+      });
+    }
+  });
+
+  if (players[playerId]) {
+    world.x = -players[playerId].x + window.innerWidth/2;
+    world.y = -players[playerId].y + window.innerHeight/2;
+    document.getElementById('score').innerText = players[playerId].score;
+  }
+
+  document.getElementById('leaders').innerHTML = sorted.slice(0,10).map((p,i) =>
+    `<div style="color:${p.id===playerId?'#2DD4BF':'#fff'}">${i+1}. ${p.name} - ${p.score}</div>`
+  ).join('');
+});
+</script>
+</body>
+</html>
