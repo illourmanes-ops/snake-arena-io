@@ -1,7 +1,9 @@
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
-const io = require('socket.io')(http);
+const io = require('socket.io')(http, {
+  cors: { origin: "*", methods: ["GET", "POST"] }
+});
 
 const PORT = process.env.PORT || 3000;
 app.use(express.static('public'));
@@ -18,7 +20,6 @@ let rooms = {
 
 let currentRoom = 'default';
 
-// Créer les orbes au start
 for (let i = 0; i < ORB_COUNT; i++) {
   rooms[currentRoom].orbs.push({
     x: Math.random() * MAP_SIZE,
@@ -29,13 +30,13 @@ for (let i = 0; i < ORB_COUNT; i++) {
 }
 
 io.on('connection', (socket) => {
-  console.log('Joueur connecté:', socket.id);
+  console.log('Connecté:', socket.id);
 
   socket.on('join', (data) => {
     rooms[currentRoom].players[socket.id] = {
       id: socket.id,
-      x: MAP_SIZE/2 + Math.random()*200-100,
-      y: MAP_SIZE/2 + Math.random()*200-100,
+      x: MAP_SIZE/2,
+      y: MAP_SIZE/2,
       angle: 0,
       segments: [],
       size: 12,
@@ -49,24 +50,22 @@ io.on('connection', (socket) => {
   });
 
   socket.on('move', (angle) => {
-    if (rooms[currentRoom].players[socket.id]) {
-      rooms[currentRoom].players[socket.id].angle = angle;
-    }
+    const p = rooms[currentRoom].players[socket.id];
+    if (p) p.angle = angle;
   });
 
   socket.on('boost', (boosting) => {
-    if (rooms[currentRoom].players[socket.id]) {
-      rooms[currentRoom].players[socket.id].speed = boosting? 5 : 2.5;
-    }
+    const p = rooms[currentRoom].players[socket.id];
+    if (p) p.speed = boosting? 5 : 2.5;
   });
 
-  socket.on('eatOrb', (orbIndex) => {
-    const player = rooms[currentRoom].players[socket.id];
+  socket.on('eatOrb', (i) => {
+    const p = rooms[currentRoom].players[socket.id];
     const orbs = rooms[currentRoom].orbs;
-    if (player && orbs[orbIndex]) {
-      player.score += Math.floor(orbs[orbIndex].size);
-      player.size += 0.2;
-      orbs[orbIndex] = {
+    if (p && orbs[i]) {
+      p.score += 5;
+      p.size += 0.3;
+      orbs[i] = {
         x: Math.random() * MAP_SIZE,
         y: Math.random() * MAP_SIZE,
         size: 5 + Math.random() * 5,
@@ -94,7 +93,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// Boucle du jeu : mouvement + envoi état
 setInterval(() => {
   const room = rooms[currentRoom];
   for (let id in room.players) {
@@ -103,13 +101,10 @@ setInterval(() => {
     p.y += Math.sin(p.angle) * p.speed;
     p.x = Math.max(p.size, Math.min(MAP_SIZE - p.size, p.x));
     p.y = Math.max(p.size, Math.min(MAP_SIZE - p.size, p.y));
-
     p.segments.unshift({x: p.x, y: p.y});
     if (p.segments.length > p.size * 3) p.segments.pop();
   }
   io.to(currentRoom).emit('state', room);
 }, 33);
 
-http.listen(PORT, () => {
-  console.log(`🐍 Snake Arena.IO running on ${PORT}`);
-});
+http.listen(PORT, () => console.log(`🐍 LIVE on ${PORT}`));
