@@ -8,71 +8,84 @@
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="https://cdn.adinplay.com/ads.js"></script>
 <style>
-  body { margin:0; overflow:hidden; background:#0a0015; font-family:Arial; touch-action:none; }
-  #menu { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:linear-gradient(135deg,#1a0033,#2a0055); padding:40px; border-radius:25px; border:3px solid #2DD4BF; text-align:center; box-shadow:0 0 40px #2DD4BF50; }
-  input,select { padding:15px; border-radius:12px; border:2px solid #2DD4BF; margin:10px; background:#0a0015; color:#fff; font-size:16px; width:200px; }
-  button { padding:18px 50px; background:linear-gradient(135deg,#2DD4BF,#1de9b6); border:none; border-radius:12px; font-weight:bold; cursor:pointer; font-size:18px; color:#000; box-shadow:0 5px 15px #2DD4BF50; }
-  button:active { transform:scale(0.95); }
-  #hud { position:absolute; top:20px; left:20px; color:#fff; font-size:28px; font-weight:bold; display:none; text-shadow:0 0 10px #2DD4BF; }
-  #minimap { position:absolute; bottom:20px; right:20px; width:180px; height:180px; background:rgba(0,0,0,0.7); border:3px solid #2DD4BF; border-radius:15px; display:none; box-shadow:0 0 20px #2DD4BF50; }
-  #dead { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:linear-gradient(135deg,#1a0033,#330000); padding:40px; border-radius:25px; border:3px solid #ff4444; text-align:center; display:none; box-shadow:0 0 40px #ff444450; }
-  #leaderboard { position:absolute; top:20px; right:20px; background:rgba(0,0,0,0.7); padding:20px; border-radius:15px; color:#fff; border:3px solid #2DD4BF; display:none; min-width:200px; box-shadow:0 0 20px #2DD4BF50; }
-  #boost { position:absolute; bottom:20px; left:20px; width:80px; height:80px; border-radius:50%; background:rgba(45,212,191,0.3); border:3px solid #2DD4BF; display:none; }
+  body { margin:0; overflow:hidden; background:#000; font-family:'Arial Black',Arial; touch-action:none; }
+  #menu { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:linear-gradient(135deg,#1a0033ee,#2a0055ee); padding:50px; border-radius:30px; border:4px solid #2DD4BF; text-align:center; box-shadow:0 0 60px #2DD4BF80; backdrop-filter:blur(10px); }
+  input,select { padding:18px; border-radius:15px; border:3px solid #2DD4BF; margin:12px; background:#0a0015; color:#fff; font-size:18px; width:250px; }
+  button { padding:20px 60px; background:linear-gradient(135deg,#2DD4BF,#1de9b6); border:none; border-radius:15px; font-weight:900; cursor:pointer; font-size:20px; color:#000; box-shadow:0 8px 25px #2DD4BF80; margin:10px; }
+  button:active { transform:scale(0.92); }
+  #hud { position:absolute; top:25px; left:25px; color:#fff; font-size:32px; font-weight:900; display:none; text-shadow:0 0 15px #2DD4BF, 2px 2px 4px #000; }
+  #minimap { position:absolute; bottom:25px; right:25px; width:200px; height:200px; background:rgba(0,0,0,0.8); border:4px solid #2DD4BF; border-radius:20px; display:none; box-shadow:0 0 30px #2DD4BF80; }
+  #dead { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:linear-gradient(135deg,#1a0033ee,#330000ee); padding:50px; border-radius:30px; border:4px solid #ff4444; text-align:center; display:none; box-shadow:0 0 60px #ff444480; backdrop-filter:blur(10px); }
+  #leaderboard { position:absolute; top:25px; right:25px; background:rgba(0,0,0,0.8); padding:25px; border-radius:20px; color:#fff; border:4px solid #2DD4BF; display:none; min-width:220px; box-shadow:0 0 30px #2DD4BF80; }
+  #boost { position:absolute; bottom:25px; left:25px; width:100px; height:100px; border-radius:50%; background:radial-gradient(circle,#2DD4BF50,#2DD4BF20); border:4px solid #2DD4BF; display:none; box-shadow:0 0 30px #2DD4BF80; }
+  #killFeed { position:absolute; top:100px; left:50%; transform:translateX(-50%); color:#fff; font-weight:bold; text-align:center; }
 </style>
 </head>
 <body>
 <div id="menu">
-  <h1 style="color:#2DD4BF; font-size:36px; margin-bottom:20px; text-shadow:0 0 20px #2DD4BF;">🐍 Snake Arena.IO</h1>
+  <h1 style="color:#2DD4BF; font-size:48px; margin-bottom:25px; text-shadow:0 0 30px #2DD4BF;">🐍 Snake Arena.IO</h1>
   <input id="name" placeholder="Pseudo" value="Player" maxlength="12">
   <br>
   <select id="skin">
-    <option value="cyan">Cyan Néon</option>
-    <option value="gold">Or Epic - Pub</option>
-    <option value="rainbow">Rainbow - Pub</option>
+    <option value="cyan">Cyan Néon - Gratuit</option>
+    <option value="gold">Or Légendaire - 1 Pub</option>
+    <option value="rainbow">Rainbow Epic - 1 Pub</option>
+    <option value="fire">Feu Infernal - 1 Pub</option>
+    <option value="ice">Glace Cristal - 1 Pub</option>
   </select>
   <br><button onclick="start()">JOUER</button>
-  <p style="color:#888; font-size:14px; margin-top:15px;">Espace ou Bouton = Boost</p>
+  <p style="color:#888; font-size:15px; margin-top:20px;">Espace/Bouton = Boost | Mange pour grossir</p>
 </div>
 <div id="hud">Score: <span id="score">0</span></div>
 <canvas id="minimap"></canvas>
-<div id="leaderboard"><b style="color:#2DD4BF; font-size:18px;">🏆 TOP 10</b><div id="leaders" style="margin-top:10px;"></div></div>
+<div id="leaderboard"><b style="color:#2DD4BF; font-size:20px;">🏆 TOP 10</b><div id="leaders" style="margin-top:12px;"></div></div>
+<div id="killFeed"></div>
 <div id="dead">
-  <h2 style="color:#ff4444; font-size:32px;">T'ES MORT</h2>
-  <p style="color:#fff; font-size:20px; margin:20px 0;">Score: <span id="finalScore">0</span></p>
-  <button onclick="reviveAd()" style="background:linear-gradient(135deg,#FFD700,#FFA500); margin-bottom:10px;">REVIVE +300 📺</button>
-  <br><button onclick="location.reload()">REJOUER</button>
+  <h2 style="color:#ff4444; font-size:40px;">TU ES MORT</h2>
+  <p style="color:#fff; font-size:24px; margin:25px 0;">Score Final: <span id="finalScore">0</span></p>
+  <button onclick="reviveAd()" style="background:linear-gradient(135deg,#FFD700,#FFA500); margin-bottom:15px;">REVIVE +500 📺</button>
+  <br><button onclick="interstitialAd()" style="background:linear-gradient(135deg,#ff4444,#cc0000);">REJOUER 📺</button>
 </div>
 <div id="boost"></div>
 
 <script>
-const app = new PIXI.Application({ resizeTo: window, antialias: true, backgroundColor: 0x0a0015 });
+const app = new PIXI.Application({ resizeTo: window, antialias: true, backgroundColor: 0x000011 });
 document.body.prepend(app.view);
 const socket = io();
-let playerId = null, game = {players:{}, orbs:[]}, mouseAngle = 0, boosting = false;
+let playerId = null, game = {players:{}, orbs:[]}, mouseAngle = 0, boosting = false, zoom = 1;
 const world = new PIXI.Container();
 app.stage.addChild(world);
 
 const SKINS = {
-  cyan: { fill: 0x2DD4BF, glow: 0x2DD4BF },
+  cyan: { fill: 0x2DD4BF, glow: 0x1de9b6 },
   gold: { fill: 0xFFD700, glow: 0xFFA500 },
-  rainbow: { fill: 0xFF00FF, glow: 0x00FFFF }
+  rainbow: { fill: 0xFF00FF, glow: 0x00FFFF },
+  fire: { fill: 0xFF4444, glow: 0xFF8800 },
+  ice: { fill: 0x00FFFF, glow: 0x0088FF }
 };
 
-// Fond dégradé + grille néon
-const bg = new PIXI.Graphics();
-bg.beginFill(0x0a0015);
-bg.drawRect(0, 0, 5000, 5000);
-bg.endFill();
-world.addChild(bg);
+const stars = new PIXI.Graphics();
+for(let i = 0; i < 500; i++) {
+  stars.beginFill(0xffffff, Math.random()*0.5+0.3);
+  stars.drawCircle(Math.random()*5000, Math.random()*5000, Math.random()*2);
+  stars.endFill();
+}
+world.addChild(stars);
 
 const grid = new PIXI.Graphics();
 for(let i = 0; i < 5000; i += 50) {
-  grid.lineStyle(1, 0x2DD4BF, 0.1);
+  grid.lineStyle(1, 0x2DD4BF, 0.08);
   grid.moveTo(i, 0).lineTo(i, 5000);
   grid.moveTo(0, i).lineTo(5000, i);
 }
 world.addChild(grid);
 
+const border = new PIXI.Graphics();
+border.lineStyle(10, 0xff0000, 0.5);
+border.drawRect(0, 0, 5000, 5000);
+world.addChild(border);
+
+let deathCount = 0;
 window.ain = window.ain || { queue: [] };
 ain.queue.push(() => ain.configAds({ siteId: 'YOUR_SITE_ID' }));
 
@@ -101,14 +114,27 @@ function reviveAd() {
   });
 }
 
+function interstitialAd() {
+  deathCount++;
+  if (deathCount % 3 === 0) {
+    adinplay.displayInterstitialAd(() => location.reload(), () => location.reload());
+  } else {
+    location.reload();
+  }
+}
+
 socket.on('init', (id) => playerId = id);
 socket.on('state', (g) => game = g);
 socket.on('dead', (data) => {
   document.getElementById('finalScore').innerText = data.score;
   document.getElementById('dead').style.display = 'block';
 });
+socket.on('killFeed', (data) => {
+  const feed = document.getElementById('killFeed');
+  feed.innerHTML = `<div style="background:rgba(0,0,0,0.8); padding:10px 20px; border-radius:10px; margin:5px; border:2px solid #ff4444;"><span style="color:${data.killerColor}">${data.killer}</span> 💀 ${data.victim}</div>` + feed.innerHTML;
+  setTimeout(() => feed.innerHTML = '', 3000);
+});
 
-// FIX CONTRÔLE SOURIS + TACTILE
 function updateAngle(x, y) {
   const dx = x - window.innerWidth/2;
   const dy = y - window.innerHeight/2;
@@ -116,112 +142,125 @@ function updateAngle(x, y) {
 }
 
 app.view.addEventListener('mousemove', (e) => updateAngle(e.clientX, e.clientY));
-app.view.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  updateAngle(e.touches[0].clientX, e.touches[0].clientY);
-}, { passive: false });
-
+app.view.addEventListener('touchmove', (e) => { e.preventDefault(); updateAngle(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
 app.view.addEventListener('touchstart', () => { boosting = true; socket.emit('boost', true); });
 app.view.addEventListener('touchend', () => { boosting = false; socket.emit('boost', false); });
 document.getElementById('boost').addEventListener('touchstart', () => { boosting = true; socket.emit('boost', true); });
 document.getElementById('boost').addEventListener('touchend', () => { boosting = false; socket.emit('boost', false); });
-
 window.addEventListener('keydown', (e) => { if(e.code==='Space') { boosting = true; socket.emit('boost', true); }});
 window.addEventListener('keyup', (e) => { if(e.code==='Space') { boosting = false; socket.emit('boost', false); }});
-
 setInterval(() => { if(playerId) socket.emit('move', mouseAngle); }, 50);
 
 const minimap = document.getElementById('minimap').getContext('2d');
-document.getElementById('minimap').width = 180;
-document.getElementById('minimap').height = 180;
+document.getElementById('minimap').width = 200;
+document.getElementById('minimap').height = 200;
 
 app.ticker.add(() => {
-  world.removeChildren();
-  world.addChild(bg, grid);
+  world.children.forEach(child => { if(child.isParticle) world.removeChild(child); });
 
-  // Orbes avec glow
   game.orbs.forEach((orb, i) => {
     const g = new PIXI.Graphics();
     g.beginFill(0x2DD4BF);
     g.drawCircle(orb.x, orb.y, orb.size);
     g.endFill();
-    // Glow
     const glow = new PIXI.Graphics();
     glow.beginFill(0x2DD4BF, 0.3);
-    glow.drawCircle(orb.x, orb.y, orb.size * 2);
+    glow.drawCircle(orb.x, orb.y, orb.size * 2.5);
     glow.endFill();
     world.addChild(glow, g);
 
-    if (game.players[playerId]) {
+    if (game.players[playerId] &&!game.players[playerId].dead) {
       const p = game.players[playerId];
       if (Math.hypot(p.x - orb.x, p.y - orb.y) < p.size + orb.size) {
         socket.emit('eatOrb', i);
+        for(let j=0; j<5; j++) {
+          const particle = new PIXI.Graphics();
+          particle.isParticle = true;
+          particle.beginFill(0x2DD4BF);
+          particle.drawCircle(orb.x, orb.y, 3);
+          particle.endFill();
+          particle.vx = (Math.random()-0.5)*10;
+          particle.vy = (Math.random()-0.5)*10;
+          particle.life = 20;
+          world.addChild(particle);
+        }
       }
     }
   });
 
-  // Joueurs avec corps + glow + tête
+  world.children.forEach(child => {
+    if(child.isParticle) {
+      child.x += child.vx;
+      child.y += child.vy;
+      child.alpha -= 0.05;
+      child.life--;
+      if(child.life <= 0) world.removeChild(child);
+    }
+  });
+
   const sorted = Object.values(game.players).sort((a,b) => b.score - a.score);
   sorted.forEach(p => {
+    if (p.dead) return;
     const skin = SKINS[p.skin] || SKINS.cyan;
     const g = new PIXI.Graphics();
 
-    // Glow du corps
-    if (p.segments.length > 1) {
-      g.lineStyle(p.size * 0.8, skin.glow, 0.4);
-      g.moveTo(p.x, p.y);
-      p.segments.forEach(s => g.lineTo(s.x, s.y));
-    }
-
-    // Corps
-    g.lineStyle(p.size * 0.6, skin.fill);
+    g.lineStyle(p.size * 1.2, skin.glow, 0.2);
     g.moveTo(p.x, p.y);
     p.segments.forEach(s => g.lineTo(s.x, s.y));
 
-    // Tête avec glow
+    g.lineStyle(p.size * 0.7, skin.fill);
+    g.moveTo(p.x, p.y);
+    p.segments.forEach(s => g.lineTo(s.x, s.y));
+
     const headGlow = new PIXI.Graphics();
-    headGlow.beginFill(skin.glow, 0.5);
-    headGlow.drawCircle(p.x, p.y, p.size * 1.5);
+    headGlow.beginFill(skin.glow, 0.4);
+    headGlow.drawCircle(p.x, p.y, p.size * 1.8);
     headGlow.endFill();
 
     g.beginFill(skin.fill);
     g.drawCircle(p.x, p.y, p.size);
     g.endFill();
 
-    // Yeux
+    const eyeDist = p.size * 0.4;
+    const eyeSize = p.size * 0.25;
+    g.beginFill(0xffffff);
+    g.drawCircle(p.x + Math.cos(p.angle)*eyeDist - Math.sin(p.angle)*eyeSize, p.y + Math.sin(p.angle)*eyeDist + Math.cos(p.angle)*eyeSize, eyeSize);
+    g.drawCircle(p.x + Math.cos(p.angle)*eyeDist + Math.sin(p.angle)*eyeSize, p.y + Math.sin(p.angle)*eyeDist - Math.cos(p.angle)*eyeSize, eyeSize);
+    g.endFill();
     g.beginFill(0x000000);
-    g.drawCircle(p.x + Math.cos(p.angle)*p.size*0.5, p.y + Math.sin(p.angle)*p.size*0.5, p.size*0.2);
+    g.drawCircle(p.x + Math.cos(p.angle)*eyeDist - Math.sin(p.angle)*eyeSize, p.y + Math.sin(p.angle)*eyeDist + Math.cos(p.angle)*eyeSize, eyeSize*0.5);
+    g.drawCircle(p.x + Math.cos(p.angle)*eyeDist + Math.sin(p.angle)*eyeSize, p.y + Math.sin(p.angle)*eyeDist - Math.cos(p.angle)*eyeSize, eyeSize*0.5);
     g.endFill();
 
     world.addChild(headGlow, g);
 
-    // Nom
-    const text = new PIXI.Text(p.name, {fontSize: 14, fill: 0xffffff, stroke: 0x000000, strokeThickness: 4, fontWeight: 'bold'});
+    const text = new PIXI.Text(p.name, {fontSize: 14, fill: 0xffffff, stroke: 0x000000, strokeThickness: 5, fontWeight: '900'});
     text.x = p.x - text.width/2;
-    text.y = p.y - p.size - 20;
+    text.y = p.y - p.size - 25;
     world.addChild(text);
 
     if (p.id === playerId) {
-      world.x = -p.x + window.innerWidth/2;
-      world.y = -p.y + window.innerHeight/2;
+      zoom = Math.max(0.5, 1 - p.size/1000);
+      world.scale.set(zoom);
+      world.x = -p.x * zoom + window.innerWidth/2;
+      world.y = -p.y * zoom + window.innerHeight/2;
       document.getElementById('score').innerText = p.score;
 
-      // Minimap
-      minimap.clearRect(0,0,180,180);
-      minimap.fillStyle = 'rgba(0,0,0,0.5)';
-      minimap.fillRect(0,0,180,180);
+      minimap.clearRect(0,0,200,200);
+      minimap.fillStyle = 'rgba(0,0,0,0.6)';
+      minimap.fillRect(0,0,200,200);
       Object.values(game.players).forEach(pl => {
+        if (pl.dead) return;
         minimap.fillStyle = pl.id === playerId? '#2DD4BF' : '#ff4444';
         minimap.beginPath();
-        minimap.arc(pl.x/5000*180, pl.y/5000*180, pl.id === playerId? 4:2, 0, 7);
+        minimap.arc(pl.x/5000*200, pl.y/5000*200, pl.id === playerId? 5:3, 0, 7);
         minimap.fill();
       });
     }
   });
 
-  // Leaderboard
-  document.getElementById('leaders').innerHTML = sorted.slice(0,10).map((p,i) =>
-    `<div style="color:${p.id===playerId?'#2DD4BF':'#fff'}; font-size:13px; margin:3px 0;">${i+1}. ${p.name} - ${p.score}</div>`
+  document.getElementById('leaders').innerHTML = sorted.filter(p=>!p.dead).slice(0,10).map((p,i) =>
+    `<div style="color:${p.id===playerId?'#2DD4BF':'#fff'}; font-size:14px; margin:4px 0; font-weight:bold;">${i+1}. ${p.name} - ${p.score}</div>`
   ).join('');
 });
 </script>
