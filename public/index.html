@@ -2,77 +2,90 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Snake Arena.IO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>slither.io</title>
 <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"></script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="https://cdn.adinplay.com/ads.js"></script>
 <style>
-  body { margin:0; overflow:hidden; background:#161616; font-family:Arial; touch-action:none; }
-  #menu { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.85); padding:40px; border-radius:15px; text-align:center; }
-  input,select { padding:12px; border-radius:8px; border:2px solid #555; margin:10px; background:#222; color:#fff; font-size:16px; width:200px; }
-  button { padding:15px 50px; background:#00ff88; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:18px; color:#000; }
-  #hud { position:absolute; top:15px; left:15px; color:#fff; font-size:20px; font-weight:bold; display:none; text-shadow:2px 2px #000; }
-  #minimap { position:absolute; bottom:15px; right:15px; width:140px; height:140px; background:rgba(0,0,0,0.4); border:2px solid #333; border-radius:50%; display:none; }
-  #dead { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); padding:40px; border-radius:15px; text-align:center; display:none; }
-  #leaderboard { position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.4); padding:10px 15px; border-radius:8px; color:#fff; display:none; min-width:160px; }
-  #boost { position:absolute; bottom:25px; left:25px; width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.1); border:2px solid #fff; display:none; }
-  #length { position:absolute; bottom:15px; left:15px; color:#fff; font-size:16px; display:none; text-shadow:2px 2px #000; }
+    * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  body { margin:0; overflow:hidden; background:#1A1A1A; font-family:Arial,Helvetica,sans-serif; touch-action:none; position:fixed; width:100%; height:100%; }
+  #menu { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(20,20,20,0.95); padding:30px; border-radius:10px; text-align:center; width:85%; max-width:340px; box-shadow:0 0 20px rgba(0,0,0,0.8); }
+  #menu h1 { color:#fff; font-size:36px; margin:0 0 20px 0; font-weight:bold; }
+  input { padding:10px; border-radius:5px; border:1px solid #444; margin:8px; background:#2a2a2a; color:#fff; font-size:15px; width:85%; text-align:center; }
+  select { padding:10px; border-radius:5px; border:1px solid #444; margin:8px; background:#2a2a2a; color:#fff; font-size:15px; width:90%; }
+  button { padding:12px 0; background:#4CAF50; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:16px; color:#fff; width:90%; margin-top:10px; }
+  button:active { background:#45a049; }
+  #hud { position:absolute; top:10px; left:10px; color:#fff; font-size:16px; display:none; z-index:10; background:rgba(0,0,0,0.3); padding:5px 10px; border-radius:5px; }
+  #minimap { position:absolute; bottom:15px; right:15px; width:130px; height:130px; background:rgba(0,0,0,0.3); border:2px solid rgba(255,255,255,0.1); border-radius:50%; display:none; z-index:10; }
+  #dead { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(20,20,20,0.95); padding:30px; border-radius:10px; text-align:center; display:none; width:85%; max-width:340px; z-index:20; }
+  #leaderboard { position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.3); padding:8px 12px; border-radius:5px; color:#fff; display:none; font-size:12px; z-index:10; }
+  #leaderboard b { color:#bbb; font-size:13px; }
+  #length { position:absolute; bottom:10px; left:10px; color:#fff; font-size:13px; display:none; z-index:10; background:rgba(0,0,0,0.3); padding:5px 10px; border-radius:5px; }
+  #boost { position:absolute; bottom:20px; left:20px; width:65px; height:65px; border-radius:50%; background:rgba(255,255,255,0.15); border:2px solid rgba(255,255,255,0.4); display:none; z-index:10; }
+  #boost:active { background:rgba(255,255,255,0.25); }
+  #joystick { position:absolute; bottom:20px; right:20px; width:90px; height:90px; border-radius:50%; background:rgba(255,255,255,0.1); border:2px solid rgba(255,255,255,0.2); display:none; z-index:10; }
+  #stick { position:absolute; top:20px; left:20px; width:50px; height:50px; border-radius:50%; background:rgba(255,255,255,0.4); }
 </style>
 </head>
 <body>
 <div id="menu">
-  <h1 style="color:#00ff88; font-size:36px; margin-bottom:20px;">snake-arena.io</h1>
+  <h1>slither.io</h1>
   <input id="name" placeholder="Nickname" value="Player" maxlength="15">
   <br><select id="skin">
     <option value="green">Green</option>
-    <option value="gold">Gold - Watch Ad</option>
-    <option value="rainbow">Rainbow - Watch Ad</option>
-    <option value="fire">Fire - Watch Ad</option>
-    <option value="ice">Ice - Watch Ad</option>
+    <option value="blue">Blue</option>
+    <option value="purple">Purple</option>
+    <option value="orange">Orange</option>
+    <option value="pink">Pink</option>
+    <option value="yellow">Yellow</option>
   </select>
   <br><button onclick="start()">Play</button>
 </div>
-<div id="hud">Score: <span id="score">0</span></div>
+<div id="hud">Your length: <span id="score">10</span></div>
 <canvas id="minimap"></canvas>
-<div id="leaderboard"><b style="color:#aaa;">Gagnants</b><div id="leaders" style="margin-top:8px;"></div></div>
-<div id="length">Votre longueur: <span id="len">15</span><br>Ton rang: <span id="rank">1</span></div>
+<div id="leaderboard"><b>Gagnants</b><div id="leaders"></div></div>
+<div id="length">Your length: <span id="len">10</span><br>Rank: <span id="rank">1</span> of <span id="total">1</span></div>
 <div id="dead">
-  <h2 style="color:#fff; font-size:28px;">Game Over</h2>
-  <p style="color:#fff; font-size:18px; margin:20px 0;">Score: <span id="finalScore">0</span></p>
-  <button onclick="reviveAd()" style="background:#FFD700; margin-bottom:10px;">Continue 📺</button>
-  <br><button onclick="interstitialAd()">Play Again</button>
+  <h2 style="color:#fff; font-size:22px;">You died!</h2>
+  <p style="color:#fff; font-size:15px; margin:15px 0;">Final length: <span id="finalScore">0</span></p>
+  <button onclick="interstitialAd()" style="background:#4CAF50; width:90%;">Play Again</button>
 </div>
 <div id="boost"></div>
+<div id="joystick"><div id="stick"></div></div>
 
 <script>
-const app = new PIXI.Application({ resizeTo: window, antialias: true, backgroundColor: 0x161616 });
+const app = new PIXI.Application({ resizeTo: window, antialias: true, backgroundColor: 0x1A1A1A });
 document.body.prepend(app.view);
 const socket = io();
 let playerId = null, game = {players:{}, orbs:[]}, mouseAngle = 0, boosting = false;
 const world = new PIXI.Container();
 app.stage.addChild(world);
 
+// COULEURS EXACTES SLITHER.IO
 const SKINS = {
-  green: ['0x00ff00','0x00dd00'],
-  gold: ['0xFFD700','0xFFA500'],
-  rainbow: ['0xFF00FF','0x00FFFF'],
-  fire: ['0xFF4444','0xFF8800'],
-  ice: ['0x00FFFF','0x0088FF']
+  green: { body: 0x00FF00, outline: 0x00CC00 },
+  blue: { body: 0x00BFFF, outline: 0x0099CC },
+  purple: { body: 0x9D50BB, outline: 0x7A3E94 },
+  orange: { body: 0xFF8800, outline: 0xCC6600 },
+  pink: { body: 0xFF69B4, outline: 0xCC5490 },
+  yellow: { body: 0xFFFF00, outline: 0xCCCC00 }
 };
 
-// FOND HEXAGONES STYLE SLITHER
+// FOND HEXAGONES EXACT SLITHER.IO
 const hexBg = new PIXI.Graphics();
-const hexSize = 25;
-for(let x = -100; x < 5100; x += hexSize * 1.5) {
-  for(let y = -100; y < 5100; y += hexSize * Math.sqrt(3)) {
+const hexSize = 28;
+for(let x = -200; x < 5200; x += hexSize * 1.5) {
+  for(let y = -200; y < 5200; y += hexSize * Math.sqrt(3)) {
     const offsetX = (Math.floor(y / (hexSize * Math.sqrt(3))) % 2) * hexSize * 0.75;
     drawHex(hexBg, x + offsetX, y, hexSize);
   }
 }
 function drawHex(g, x, y, size) {
-  g.lineStyle(1, 0x2a2a2a, 1);
-  g.beginFill(0x1e1e1e);
+  g.lineStyle(2, 0x2E2E2E, 1);
+  g.beginFill(0x242424);
   g.moveTo(x + size, y);
   for(let i = 1; i <= 6; i++) {
     g.lineTo(x + size * Math.cos(i * Math.PI / 3), y + size * Math.sin(i * Math.PI / 3));
@@ -87,11 +100,7 @@ ain.queue.push(() => ain.configAds({ siteId: 'YOUR_SITE_ID' }));
 
 function start() {
   const skin = document.getElementById('skin').value;
-  if (skin!== 'green') {
-    adinplay.displayRewardedAd(() => joinGame(skin), () => joinGame('green'));
-  } else {
-    joinGame('green');
-  }
+  joinGame(skin);
 }
 
 function joinGame(skin) {
@@ -102,13 +111,7 @@ function joinGame(skin) {
   document.getElementById('leaderboard').style.display = 'block';
   document.getElementById('boost').style.display = 'block';
   document.getElementById('length').style.display = 'block';
-}
-
-function reviveAd() {
-  adinplay.displayRewardedAd(() => {
-    socket.emit('revive');
-    document.getElementById('dead').style.display = 'none';
-  });
+  document.getElementById('joystick').style.display = 'block';
 }
 
 function interstitialAd() {
@@ -123,7 +126,7 @@ function interstitialAd() {
 socket.on('init', (id) => playerId = id);
 socket.on('state', (g) => game = g);
 socket.on('dead', (data) => {
-  document.getElementById('finalScore').innerText = data.score;
+  document.getElementById('finalScore').innerText = Math.floor(data.score);
   document.getElementById('dead').style.display = 'block';
 });
 
@@ -134,30 +137,66 @@ function updateAngle(x, y) {
 }
 
 app.view.addEventListener('mousemove', (e) => updateAngle(e.clientX, e.clientY));
-app.view.addEventListener('touchmove', (e) => { e.preventDefault(); updateAngle(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
-app.view.addEventListener('touchstart', () => { boosting = true; socket.emit('boost', true); });
-app.view.addEventListener('touchend', () => { boosting = false; socket.emit('boost', false); });
-document.getElementById('boost').addEventListener('touchstart', () => { boosting = true; socket.emit('boost', true); });
+
+// MOBILE JOYSTICK
+let joystickActive = false;
+const joystick = document.getElementById('joystick');
+const stick = document.getElementById('stick');
+
+joystick.addEventListener('touchstart', (e) => {
+  joystickActive = true;
+  handleJoystick(e.touches[0]);
+});
+joystick.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (joystickActive) handleJoystick(e.touches[0]);
+});
+joystick.addEventListener('touchend', () => {
+  joystickActive = false;
+  stick.style.top = '20px';
+  stick.style.left = '20px';
+});
+
+function handleJoystick(touch) {
+  const rect = joystick.getBoundingClientRect();
+  const cx = rect.left + rect.width/2;
+  const cy = rect.top + rect.height/2;
+  const dx = touch.clientX - cx;
+  const dy = touch.clientY - cy;
+  const dist = Math.min(22, Math.hypot(dx, dy));
+  const angle = Math.atan2(dy, dx);
+  stick.style.left = 20 + Math.cos(angle) * dist + 'px';
+  stick.style.top = 20 + Math.sin(angle) * dist + 'px';
+  mouseAngle = angle;
+}
+
+// BOOST
+document.getElementById('boost').addEventListener('touchstart', (e) => { e.preventDefault(); boosting = true; socket.emit('boost', true); });
 document.getElementById('boost').addEventListener('touchend', () => { boosting = false; socket.emit('boost', false); });
+app.view.addEventListener('touchstart', (e) => { if(e.touches.length === 1 &&!joystickActive) { boosting = true; socket.emit('boost', true); }});
+app.view.addEventListener('touchend', () => { boosting = false; socket.emit('boost', false); });
 window.addEventListener('keydown', (e) => { if(e.code==='Space') { boosting = true; socket.emit('boost', true); }});
 window.addEventListener('keyup', (e) => { if(e.code==='Space') { boosting = false; socket.emit('boost', false); }});
+
 setInterval(() => { if(playerId) socket.emit('move', mouseAngle); }, 33);
 
 const minimap = document.getElementById('minimap').getContext('2d');
-document.getElementById('minimap').width = 140;
-document.getElementById('minimap').height = 140;
+document.getElementById('minimap').width = 130;
+document.getElementById('minimap').height = 130;
 
 app.ticker.add(() => {
-  // Garde le fond, supprime le reste
   while(world.children.length > 1) world.removeChildAt(1);
 
-  // Orbes style Slither - petits ronds colorés
+  // ORBES STYLE SLITHER - petits ronds glow
   game.orbs.forEach((orb, i) => {
     const g = new PIXI.Graphics();
-    g.beginFill(0xffffff, 0.3);
-    g.drawCircle(orb.x, orb.y, orb.size + 2);
+    const color = parseInt(orb.color.replace('hsl','0x').replace(/[()%\s]/g,''));
+    // Glow
+    g.beginFill(color, 0.4);
+    g.drawCircle(orb.x, orb.y, orb.size + 3);
     g.endFill();
-    g.beginFill(parseInt(orb.color.replace('hsl','0x').replace(/[()%\s]/g,'')));
+    // Orbe
+    g.beginFill(color);
     g.drawCircle(orb.x, orb.y, orb.size);
     g.endFill();
     world.addChild(g);
@@ -170,72 +209,90 @@ app.ticker.add(() => {
     }
   });
 
-  // Joueurs style Slither
+  // SNAKES STYLE SLITHER.IO EXACT
   const sorted = Object.values(game.players).sort((a,b) => b.score - a.score);
   sorted.forEach(p => {
     if (p.dead) return;
     const colors = SKINS[p.skin] || SKINS.green;
     const g = new PIXI.Graphics();
 
-    // Corps - cercles qui se chevauchent
+    // Corps - cercles qui se chevauchent avec outline
     for(let i = p.segments.length - 1; i >= 0; i--) {
       const seg = p.segments[i];
-      const size = p.size * (1 - i / p.segments.length * 0.4);
-      g.beginFill(colors[1]);
+      const size = p.size * (1 - i / p.segments.length * 0.3);
+      // Outline
+      g.beginFill(colors.outline);
       g.drawCircle(seg.x, seg.y, size);
       g.endFill();
-      g.beginFill(colors[0]);
-      g.drawCircle(seg.x, seg.y, size * 0.8);
+      // Body
+      g.beginFill(colors.body);
+      g.drawCircle(seg.x, seg.y, size * 0.85);
       g.endFill();
     }
 
-    // Tête
-    g.beginFill(colors[1]);
+    // Tête avec outline
+    g.beginFill(colors.outline);
     g.drawCircle(p.x, p.y, p.size);
     g.endFill();
-    g.beginFill(colors[0]);
-    g.drawCircle(p.x, p.y, p.size * 0.8);
+    g.beginFill(colors.body);
+    g.drawCircle(p.x, p.y, p.size * 0.85);
     g.endFill();
 
-    // Yeux style Slither - gros yeux blancs
+    // YEUX SLITHER.IO EXACTS - gros blancs + pupilles noires
+    const eyeAngle1 = p.angle + 0.6;
+    const eyeAngle2 = p.angle - 0.6;
     const eyeDist = p.size * 0.5;
-    const eyeSize = p.size * 0.35;
-    g.beginFill(0xffffff);
-    g.drawCircle(p.x + Math.cos(p.angle + 0.5)*eyeDist, p.y + Math.sin(p.angle + 0.5)*eyeDist, eyeSize);
-    g.drawCircle(p.x + Math.cos(p.angle - 0.5)*eyeDist, p.y + Math.sin(p.angle - 0.5)*eyeDist, eyeSize);
+    const eyeSize = p.size * 0.4;
+
+    // Oeil 1 blanc
+    g.beginFill(0xFFFFFF);
+    g.drawCircle(p.x + Math.cos(eyeAngle1)*eyeDist, p.y + Math.sin(eyeAngle1)*eyeDist, eyeSize);
     g.endFill();
+    // Pupille 1 noire
     g.beginFill(0x000000);
-    g.drawCircle(p.x + Math.cos(p.angle + 0.5)*eyeDist, p.y + Math.sin(p.angle + 0.5)*eyeDist, eyeSize*0.5);
-    g.drawCircle(p.x + Math.cos(p.angle - 0.5)*eyeDist, p.y + Math.sin(p.angle - 0.5)*eyeDist, eyeSize*0.5);
+    g.drawCircle(p.x + Math.cos(eyeAngle1)*eyeDist, p.y + Math.sin(eyeAngle1)*eyeDist, eyeSize*0.5);
+    g.endFill();
+
+    // Oeil 2 blanc
+    g.beginFill(0xFFFFFF);
+    g.drawCircle(p.x + Math.cos(eyeAngle2)*eyeDist, p.y + Math.sin(eyeAngle2)*eyeDist, eyeSize);
+    g.endFill();
+    // Pupille 2 noire
+    g.beginFill(0x000000);
+    g.drawCircle(p.x + Math.cos(eyeAngle2)*eyeDist, p.y + Math.sin(eyeAngle2)*eyeDist, eyeSize*0.5);
     g.endFill();
 
     world.addChild(g);
 
     // Nom
-    const text = new PIXI.Text(p.name, {fontSize: 12, fill: 0xffffff, stroke: 0x000000, strokeThickness: 3, fontWeight: 'bold'});
-    text.x = p.x - text.width/2;
-    text.y = p.y - p.size - 20;
-    world.addChild(text);
+    if(p.name) {
+      const text = new PIXI.Text(p.name, {fontSize: 10, fill: 0xffffff, stroke: 0x000000, strokeThickness: 3, fontFamily: 'Arial'});
+      text.x = p.x - text.width/2;
+      text.y = p.y - p.size - 16;
+      world.addChild(text);
+    }
 
     if (p.id === playerId) {
-      // Caméra fluide
-      world.x += (-p.x + window.innerWidth/2 - world.x) * 0.15;
-      world.y += (-p.y + window.innerHeight/2 - world.y) * 0.15;
-      document.getElementById('score').innerText = p.score;
+      world.x += (-p.x + window.innerWidth/2 - world.x) * 0.12;
+      world.y += (-p.y + window.innerHeight/2 - world.y) * 0.12;
+      document.getElementById('score').innerText = Math.floor(p.score);
       document.getElementById('len').innerText = Math.floor(p.size);
       document.getElementById('rank').innerText = sorted.indexOf(p) + 1;
+      document.getElementById('total').innerText = sorted.length;
 
       // Minimap ronde
-      minimap.clearRect(0,0,140,140);
-      minimap.fillStyle = 'rgba(0,0,0,0.3)';
+      minimap.clearRect(0,0,130,130);
+      minimap.fillStyle = 'rgba(0,0,0,0.2)';
       minimap.beginPath();
-      minimap.arc(70,70,70,0,7);
+      minimap.arc(65,65,65,0,7);
       minimap.fill();
+      minimap.strokeStyle = 'rgba(255,255,255,0.1)';
+      minimap.stroke();
       Object.values(game.players).forEach(pl => {
         if (pl.dead) return;
-        minimap.fillStyle = pl.id === playerId? '#00ff88' : '#ff4444';
+        minimap.fillStyle = pl.id === playerId? '#00FF00' : '#888888';
         minimap.beginPath();
-        minimap.arc(70 + (pl.x-2500)/5000*140, 70 + (pl.y-2500)/5000*140, pl.id === playerId? 3:2, 0, 7);
+        minimap.arc(65 + (pl.x-2500)/5000*130, 65 + (pl.y-2500)/5000*130, pl.id === playerId? 3:2, 0, 7);
         minimap.fill();
       });
     }
@@ -243,7 +300,7 @@ app.ticker.add(() => {
 
   // Leaderboard style Slither
   document.getElementById('leaders').innerHTML = sorted.filter(p=>!p.dead).slice(0,10).map((p,i) =>
-    `<div style="color:${i<3?'#ff4444':'#aaa'}; font-size:12px; margin:2px 0;">#${i+1} ${p.name.substring(0,10)} - ${p.score}</div>`
+    `<div style="color:${i===0?'#FF4444':i===1?'#FF8844':i===2?'#FFCC44':'#aaa'}; font-size:11px; margin:1px 0;">${p.name.substring(0,12)}</div>`
   ).join('');
 });
 </script>
