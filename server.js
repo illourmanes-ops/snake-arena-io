@@ -25,7 +25,7 @@ for (let i = 0; i < BOT_COUNT; i++) {
   game.bots[id] = {
     id, x: Math.random()*MAP_SIZE, y: Math.random()*MAP_SIZE, angle: Math.random()*6.28,
     segments: [], size: 15 + Math.random()*25, score: Math.floor(Math.random()*1000),
-    name: BOT_NAMES[i], speed: 2.5, isBot: true, skin: 'cyan',
+    name: BOT_NAMES[i], speed: 10, isBot: true, skin: 'green',
     color: `hsl(${Math.random()*360},100%,50%)`, target: null
   };
 }
@@ -34,8 +34,9 @@ io.on('connection', (socket) => {
   socket.on('join', (data) => {
     game.players[socket.id] = {
       id: socket.id, x: MAP_SIZE/2, y: MAP_SIZE/2, angle: 0, segments: [],
-      size: 15, score: 0, name: data.name?.substring(0,12) || 'Anon',
-      speed: 3, boost: false, skin: data.skin || 'cyan',
+      size: 15, score: 0, name: data.name?.substring(0,15) || 'Anon',
+      speed: 10,
+      boost: false, skin: data.skin || 'green',
       color: `hsl(${Math.random()*360},100%,50%)`, dead: false
     };
     socket.emit('init', socket.id);
@@ -94,7 +95,6 @@ function checkCollision() {
           } else {
             p1.dead = true;
             io.to(id1).emit('dead', { score: p1.score, killer: p2.name });
-            io.emit('killFeed', { killer: p2.name, victim: p1.name, killerColor: p2.color });
             p1.segments.forEach((seg, i) => {
               if (i % 2 === 0) game.orbs.push({ x: seg.x, y: seg.y, size: 10, color: p1.color });
             });
@@ -133,13 +133,15 @@ setInterval(() => {
   for (let id in game.players) {
     const p = game.players[id];
     if (p.dead) continue;
+
     if (p.boost && p.score > 10) {
-      p.speed = 6;
-      p.score -= 0.3;
-      p.size = Math.max(15, p.size - 0.01);
+      p.speed = 20;
+      p.score -= 0.8;
+      p.size = Math.max(15, p.size - 0.03);
     } else {
-      p.speed = 3;
+      p.speed = 10;
     }
+
     p.x += Math.cos(p.angle) * p.speed;
     p.y += Math.sin(p.angle) * p.speed;
     p.x = Math.max(p.size, Math.min(MAP_SIZE - p.size, p.x));
@@ -152,4 +154,4 @@ setInterval(() => {
   io.emit('state', { players: {...game.players,...game.bots}, orbs: game.orbs });
 }, 50);
 
-http.listen(PORT, () => console.log('🔥 SNAKE ARENA V3 LIVE'));
+http.listen(PORT, () => console.log('🔥 SNAKE ARENA V5 SLITHER CLONE LIVE'));
