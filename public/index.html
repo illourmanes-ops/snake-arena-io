@@ -3,11 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Snake Arena — Ultime</title>
-
+<title>Snake.io — Ultime</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-
 <style>
   :root {
     --neon-cyan: #00f3ff;
@@ -16,9 +14,7 @@
     --bg-dark: #05050b;
     --panel-bg: rgba(10, 10, 20, 0.82);
   }
-
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
   html, body {
     width: 100%; height: 100%;
     overflow: hidden;
@@ -26,26 +22,17 @@
     font-family: 'Rajdhani', sans-serif;
     color: #fff;
     touch-action: none;
-    overscroll-behavior: none;
-    -webkit-user-select: none;
     user-select: none;
   }
-
   canvas { display: block; touch-action: none; }
 
-  /* ---------- MENU ---------- */
-  /* NOTE: le centrage est géré par .menu-wrap (position absolute + transform),
-     volontairement indépendant du display (block/flex) que game.js pose en JS
-     sur #menu — sinon le menu se retrouve collé en haut-gauche au lieu d'être centré. */
   #menu {
     display: none;
     position: fixed; inset: 0;
     z-index: 50;
-    background:
-      radial-gradient(circle at 50% 30%, rgba(0,243,255,0.08), transparent 60%),
-      linear-gradient(180deg, #05050b 0%, #0a0a16 100%);
+    background: radial-gradient(circle at 50% 30%, rgba(0,243,255,0.08), transparent 60%),
+                linear-gradient(180deg, #05050b, #0a0a16);
   }
-
   .menu-wrap {
     position: absolute;
     top: 50%; left: 50%;
@@ -59,7 +46,6 @@
     padding: 20px;
     text-align: center;
   }
-
   #menu h1 {
     font-family: 'Orbitron', sans-serif;
     font-weight: 900;
@@ -72,20 +58,10 @@
     text-shadow: 0 0 30px rgba(0, 243, 255, 0.35);
     animation: pulseTitle 2.5s ease-in-out infinite;
   }
-
-  #menu .subtitle {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 12px;
-    letter-spacing: 6px;
-    color: #7a8bb0;
-    margin-top: -14px;
-  }
-
   @keyframes pulseTitle {
     0%, 100% { filter: drop-shadow(0 0 6px rgba(0,243,255,0.4)); }
     50% { filter: drop-shadow(0 0 18px rgba(255,0,85,0.5)); }
   }
-
   .menu-card {
     background: var(--panel-bg);
     border: 1px solid rgba(0, 243, 255, 0.25);
@@ -93,19 +69,16 @@
     padding: 22px;
     width: min(340px, 88vw);
     backdrop-filter: blur(6px);
-    box-shadow: 0 0 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,243,255,0.04);
   }
-
   .field-label {
     font-family: 'Orbitron', sans-serif;
     font-size: 10px;
     letter-spacing: 2px;
     color: var(--neon-cyan);
     text-align: left;
-    margin-bottom: 6px;
     display: block;
+    margin-bottom: 6px;
   }
-
   #name {
     width: 100%;
     padding: 12px 14px;
@@ -120,23 +93,19 @@
     margin-bottom: 18px;
   }
   #name:focus { border-color: var(--neon-cyan); box-shadow: 0 0 12px rgba(0,243,255,0.3); }
-
   #skinGrid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 10px;
     margin-bottom: 20px;
   }
-
   .skin-dot {
     aspect-ratio: 1;
     border-radius: 50%;
     border: 2px solid transparent;
     cursor: pointer;
-    position: relative;
-    transition: transform 0.15s ease, border-color 0.15s ease;
+    transition: transform 0.15s, border-color 0.15s;
   }
-  .skin-dot:active { transform: scale(0.92); }
   .skin-dot.selected {
     border-color: #fff;
     box-shadow: 0 0 14px currentColor;
@@ -161,17 +130,13 @@
     background: linear-gradient(90deg, var(--neon-cyan), #7cf9ff);
     box-shadow: 0 0 22px rgba(0,243,255,0.45);
     cursor: pointer;
-    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    transition: transform 0.12s, box-shadow 0.12s;
   }
-  #startBtn:active { transform: scale(0.97); box-shadow: 0 0 10px rgba(0,243,255,0.3); }
+  #startBtn:active { transform: scale(0.97); }
 
-  .menu-hint {
-    font-size: 12px;
-    color: #5c6b8a;
-    letter-spacing: 1px;
-  }
+  .hint { font-size: 12px; color: #5c6b8a; letter-spacing: 1px; margin-top: 8px; }
 
-  /* ---------- HUD ---------- */
+  /* HUD */
   #hud {
     display: none;
     position: fixed;
@@ -184,7 +149,6 @@
     padding: 10px 16px;
     font-family: 'Orbitron', sans-serif;
     backdrop-filter: blur(6px);
-    box-shadow: 0 0 20px rgba(0,0,0,0.4);
   }
   #hud .stat-row { display: flex; align-items: baseline; gap: 8px; margin: 3px 0; }
   #hud .stat-label { font-size: 9px; letter-spacing: 1.5px; color: #7a8bb0; width: 56px; }
@@ -204,10 +168,9 @@
     text-align: right;
     backdrop-filter: blur(6px);
   }
-  #length .stat-label { font-family: 'Orbitron', sans-serif; font-size: 9px; letter-spacing: 1.5px; color: #7a8bb0; }
-  #length .stat-value { font-family: 'Orbitron', sans-serif; font-size: 15px; font-weight: 700; color: var(--neon-green); }
+  #length .stat-label { font-size: 9px; letter-spacing: 1.5px; color: #7a8bb0; }
+  #length .stat-value { font-size: 15px; font-weight: 700; color: var(--neon-green); }
 
-  /* ---------- LEADERBOARD ---------- */
   #leaderboard {
     display: none;
     position: fixed;
@@ -220,18 +183,10 @@
     border-radius: 12px;
     padding: 10px 12px;
     backdrop-filter: blur(6px);
-    box-shadow: 0 0 20px rgba(0,0,0,0.4);
   }
-  #leaderboard .lb-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 10px;
-    letter-spacing: 2px;
-    color: var(--neon-pink);
-    margin-bottom: 6px;
-  }
+  #leaderboard .lb-title { font-family: 'Orbitron', sans-serif; font-size: 10px; letter-spacing: 2px; color: var(--neon-pink); margin-bottom: 6px; }
   #leaders { font-size: 12px; }
 
-  /* ---------- MINIMAP ---------- */
   #minimap {
     display: none;
     position: fixed;
@@ -243,7 +198,6 @@
     box-shadow: 0 0 20px rgba(0,0,0,0.5);
   }
 
-  /* ---------- DEAD SCREEN ---------- */
   #dead {
     display: none;
     position: fixed; inset: 0;
@@ -251,7 +205,6 @@
     background: rgba(5,5,11,0.92);
     backdrop-filter: blur(4px);
   }
-
   .dead-wrap {
     position: absolute;
     top: 50%; left: 50%;
@@ -260,26 +213,9 @@
     flex-direction: column;
     align-items: center;
     gap: 18px;
-    text-align: center;
   }
-  #dead h2 {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 30px;
-    letter-spacing: 3px;
-    color: var(--neon-pink);
-    text-shadow: 0 0 20px rgba(255,0,85,0.5);
-  }
-  #dead .score-box {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 13px;
-    color: #7a8bb0;
-    letter-spacing: 1.5px;
-  }
-  #finalScore {
-    font-size: 26px;
-    color: var(--neon-cyan);
-    font-weight: 700;
-  }
+  #dead h2 { font-family: 'Orbitron', sans-serif; font-size: 30px; color: var(--neon-pink); text-shadow: 0 0 20px rgba(255,0,85,0.5); }
+  #finalScore { font-size: 26px; color: var(--neon-cyan); font-weight: 700; }
   #respawnBtn {
     padding: 13px 34px;
     border: none;
@@ -295,7 +231,6 @@
   }
   #respawnBtn:active { transform: scale(0.97); }
 
-  /* Boost visuel : léger vignettage rouge quand actif */
   #boostVignette {
     display: none;
     position: fixed; inset: 0;
@@ -303,25 +238,16 @@
     pointer-events: none;
     box-shadow: inset 0 0 120px rgba(255,0,85,0.35);
   }
-
-  @media (max-width: 480px) {
-    #leaderboard { width: 150px; }
-    #hud, #length { padding: 8px 12px; }
-  }
 </style>
 </head>
 <body>
 
-<!-- MENU PRINCIPAL -->
 <div id="menu">
   <div class="menu-wrap">
-    <h1>SNAKE ARENA</h1>
-    <div class="subtitle">U L T I M E</div>
-
+    <h1>SNAKE.IO</h1>
     <div class="menu-card">
       <label class="field-label">PSEUDO</label>
       <input id="name" type="text" maxlength="15" placeholder="Cyber_Anon" autocomplete="off">
-
       <label class="field-label">SKIN</label>
       <div id="skinGrid">
         <div class="skin-dot selected" data-skin="cyan"></div>
@@ -331,39 +257,31 @@
         <div class="skin-dot" data-skin="green"></div>
       </div>
       <input type="hidden" id="skin" value="cyan">
-
       <button id="startBtn">JOUER</button>
+      <div class="hint">Souris / clavier / tactile · Espace ou double‑doigt pour booster</div>
     </div>
-
-    <div class="menu-hint">Souris / joystick tactile pour diriger · Espace ou double-doigt pour boost</div>
   </div>
 </div>
 
-<!-- HUD SCORE -->
 <div id="hud">
   <div class="stat-row"><span class="stat-label">SCORE</span><span class="stat-value" id="score">0</span></div>
   <div class="stat-row"><span class="stat-label">RANG</span><span class="stat-value" id="rank">-</span><span class="stat-value" style="color:#7a8bb0;font-size:12px;">/ <span id="total">0</span></span></div>
+  <div class="stat-row"><span class="stat-label">VITESSE</span><span class="stat-value" id="speed" style="color:#ffaa00;">0</span></div>
 </div>
 
-<!-- TAILLE -->
 <div id="length">
   <div class="stat-label">TAILLE</div>
   <div class="stat-value" id="len">0</div>
 </div>
 
-<!-- LEADERBOARD -->
 <div id="leaderboard">
   <div class="lb-title">TOP JOUEURS</div>
   <div id="leaders"></div>
 </div>
 
-<!-- MINIMAP -->
 <canvas id="minimap"></canvas>
-
-<!-- VIGNETTE BOOST -->
 <div id="boostVignette"></div>
 
-<!-- ECRAN DE MORT -->
 <div id="dead">
   <div class="dead-wrap">
     <h2>💀 ÉLIMINÉ</h2>
@@ -373,12 +291,11 @@
   </div>
 </div>
 
-<!-- LIBS -->
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.2/pixi.min.js"></script>
 
-<!-- SÉLECTION DE SKIN (CSP-safe, pas d'onclick inline) -->
 <script>
+  // Sélection des skins
   document.querySelectorAll('.skin-dot').forEach(dot => {
     dot.addEventListener('click', () => {
       document.querySelectorAll('.skin-dot').forEach(d => d.classList.remove('selected'));
@@ -386,19 +303,8 @@
       document.getElementById('skin').value = dot.dataset.skin;
     });
   });
-
-  // Bouton rejouer : recharge simplement le menu
-  document.getElementById('respawnBtn').addEventListener('click', () => {
-    document.getElementById('dead').style.display = 'none';
-    document.getElementById('hud').style.display = 'none';
-    document.getElementById('length').style.display = 'none';
-    document.getElementById('minimap').style.display = 'none';
-    document.getElementById('leaderboard').style.display = 'none';
-    document.getElementById('menu').style.display = 'flex';
-  });
+  // Le respawn est géré dans game.js
 </script>
-
-<!-- LOGIQUE DE JEU -->
 <script src="game.js"></script>
 </body>
 </html>
