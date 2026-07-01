@@ -57,7 +57,6 @@ io.on('connection', (socket) => {
   socket.on('join', (data) => {
     let p = game.players[socket.id];
     if (p) {
-      // Réinitialisation
       p.x = Math.random() * 3000 + 1000;
       p.y = Math.random() * 3000 + 1000;
       p.angle = 0.3;
@@ -136,9 +135,8 @@ io.on('connection', (socket) => {
   });
 });
 
-// Boucle de jeu
 setInterval(() => {
-  // 1. Manger les orbes (humains)
+  // Manger les orbes (humains)
   for (let id in game.players) {
     const p = game.players[id];
     if (p.dead) continue;
@@ -156,11 +154,10 @@ setInterval(() => {
     }
   }
 
-  // 2. Déplacement humains
+  // Déplacement humains
   for (let id in game.players) {
     const p = game.players[id];
     if (p.dead) continue;
-
     if (p.boost && p.score > 50) {
       p.speed = 50;
       p.score -= 0.7;
@@ -170,11 +167,9 @@ setInterval(() => {
       p.speed = 30;
       p.boostActive = false;
     }
-
     let diff = p.targetAngle - p.angle;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
     p.angle += diff * 0.25;
-
     p.x += Math.cos(p.angle) * p.speed;
     p.y += Math.sin(p.angle) * p.speed;
     p.x = Math.max(p.size, Math.min(MAP_SIZE - p.size, p.x));
@@ -182,8 +177,7 @@ setInterval(() => {
     manageSegments(p);
   }
 
-  // 3. Bots (simplifiés)
-  const allEntities = { ...game.players, ...game.bots };
+  // Bots
   for (let id in game.bots) {
     const b = game.bots[id];
     if (Math.random() < 0.02) b.targetAngle = Math.random() * 6.28;
@@ -194,7 +188,6 @@ setInterval(() => {
     b.y += Math.sin(b.angle) * b.speed;
     b.x = Math.max(b.size, Math.min(MAP_SIZE - b.size, b.x));
     b.y = Math.max(b.size, Math.min(MAP_SIZE - b.size, b.y));
-
     for (let idx = game.orbs.length - 1; idx >= 0; idx--) {
       const o = game.orbs[idx];
       if (Math.hypot(b.x - o.x, b.y - o.y) < b.size + o.size + 8) {
@@ -206,7 +199,7 @@ setInterval(() => {
     manageSegments(b);
   }
 
-  // 4. Collisions
+  // Collisions
   const toKill = [];
   const all = { ...game.players, ...game.bots };
   for (let id1 in all) {
@@ -244,7 +237,6 @@ setInterval(() => {
     }
   });
 
-  // Nettoyage des morts
   for (let id in game.players) {
     const p = game.players[id];
     if (p.dead && p.deadSince && Date.now() - p.deadSince > 5000) {
