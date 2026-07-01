@@ -3,19 +3,23 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http, { cors: { origin: "*" } });
 const PORT = process.env.PORT || 3000;
+
+// Servir les fichiers du dossier public
 app.use(express.static('public'));
 
+// ---- LOGIQUE DU JEU ----
 const MAP_SIZE = 5000;
 const ORB_COUNT = 400;
 const MAX_ORBS = ORB_COUNT * 2;
 const BOT_COUNT = 15;
 const TICK_INTERVAL = 20;
 
-const CYBER_COLORS = ['0x00ffcc', '0xff0055', '0x00f3ff', '0xff8800', '0xcc00ff', '0xffff00'];
-function randColor() { return CYBER_COLORS[Math.floor(Math.random()*CYBER_COLORS.length)]; }
+const COLORS = ['0x00ffcc', '0xff0055', '0x00f3ff', '0xff8800', '0xcc00ff', '0xffff00'];
+function randColor() { return COLORS[Math.floor(Math.random()*COLORS.length)]; }
 
 let game = { players: {}, orbs: [], bots: {} };
 
+// Orbes
 for (let i = 0; i < ORB_COUNT; i++) {
   game.orbs.push({
     x: Math.random() * MAP_SIZE,
@@ -25,6 +29,7 @@ for (let i = 0; i < ORB_COUNT; i++) {
   });
 }
 
+// Bots
 const BOT_NAMES = ['K1NG_SNAKE', 'N3ON_BLAD3', 'V3CTOR_X', 'CYB3R_VIP3R', 'GL1TCH_MONST3R', 'PULSE_CRAWL3R'];
 const SKIN_KEYS = ['cyan', 'magenta', 'purple', 'orange', 'green'];
 
@@ -39,7 +44,7 @@ function createBot(id) {
     size: 16,
     score: 200,
     name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
-    speed: 18,
+    speed: 20,
     isBot: true,
     skin: SKIN_KEYS[Math.floor(Math.random() * SKIN_KEYS.length)],
     color: randColor(),
@@ -53,7 +58,10 @@ for (let i = 0; i < BOT_COUNT; i++) {
   game.bots[id] = createBot(id);
 }
 
+// ---- SOCKET.IO ----
 io.on('connection', (socket) => {
+  console.log('🟢 Client connecté:', socket.id);
+
   socket.on('join', (data) => {
     let p = game.players[socket.id];
     if (p) {
@@ -125,18 +133,13 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    const p = game.players[socket.id];
-    if (p && !p.dead) {
-      p.segments.forEach((seg, i) => {
-        if (i % 2 === 0) game.orbs.push({ x: seg.x, y: seg.y, size: 8, color: p.color });
-      });
-    }
     delete game.players[socket.id];
   });
 });
 
+// ---- BOUCLE DE JEU ----
 setInterval(() => {
-  // Manger les orbes (humains)
+  // 1. Manger les orbes (humains)
   for (let id in game.players) {
     const p = game.players[id];
     if (p.dead) continue;
@@ -154,7 +157,7 @@ setInterval(() => {
     }
   }
 
-  // Déplacement humains
+  // 2. Déplacement humains
   for (let id in game.players) {
     const p = game.players[id];
     if (p.dead) continue;
@@ -177,7 +180,7 @@ setInterval(() => {
     manageSegments(p);
   }
 
-  // Bots
+  // 3. Bots
   for (let id in game.bots) {
     const b = game.bots[id];
     if (Math.random() < 0.02) b.targetAngle = Math.random() * 6.28;
@@ -199,7 +202,7 @@ setInterval(() => {
     manageSegments(b);
   }
 
-  // Collisions
+  // 4. Collisions
   const toKill = [];
   const all = { ...game.players, ...game.bots };
   for (let id1 in all) {
@@ -237,17 +240,18 @@ setInterval(() => {
     }
   });
 
+  // Nettoyage
   for (let id in game.players) {
     const p = game.players[id];
     if (p.dead && p.deadSince && Date.now() - p.deadSince > 5000) {
       delete game.players[id];
     }
   }
-
   if (game.orbs.length > MAX_ORBS) {
     game.orbs.splice(0, game.orbs.length - MAX_ORBS);
   }
 
+  // Envoi
   const active = { ...game.players };
   for (let id in game.bots) active[id] = game.bots[id];
   io.emit('state', { players: active, orbs: game.orbs });
