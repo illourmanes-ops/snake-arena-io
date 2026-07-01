@@ -3,68 +3,60 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<title>Slither Arena Cyber</title>
+<title>Cyber Slither Elite</title>
 <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"></script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<script src="https://cdn.adinplay.com/ads.js"></script>
 <style>
   * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; box-sizing: border-box; }
-  body { margin:0; overflow:hidden; background:#0a0a12; font-family:'Segoe UI', Arial, sans-serif; touch-action:none; position:fixed; width:100%; height:100%; }
-  #menu { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(15, 15, 26, 0.95); padding:30px; border-radius:15px; text-align:center; width:85%; max-width:340px; box-shadow:0 0 30px rgba(0, 255, 204, 0.2); border: 1px solid rgba(0, 255, 204, 0.3); }
-  #menu h1 { color:#fff; font-size:36px; margin:0 0 20px 0; font-weight:bold; text-shadow: 0 0 10px #00ffcc; letter-spacing: 2px; }
-  input { padding:12px; border-radius:8px; border:1px solid #333; margin:8px 0; background:#141424; color:#fff; font-size:15px; width:100%; text-align:center; outline: none; }
-  input:focus { border-color: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); }
-  select { padding:12px; border-radius:8px; border:1px solid #333; margin:8px 0; background:#141424; color:#fff; font-size:15px; width:100%; outline: none; }
-  button { padding:14px 0; background:linear-gradient(135deg, #00ffcc, #0099ff); border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:16px; color:#000; width:100%; margin-top:15px; transition: all 0.2s; }
-  button:active { transform: scale(0.98); }
-  #hud { position:absolute; top:15px; left:15px; color:#fff; font-size:16px; display:none; z-index:10; background:rgba(15,15,26,0.7); padding:8px 15px; border-radius:8px; border-left: 4px solid #00ffcc; }
-  #minimap { position:absolute; bottom:20px; right:20px; width:140px; height:140px; background:rgba(10,10,20,0.6); border:2px solid rgba(0, 255, 204, 0.3); border-radius:50%; display:none; z-index:10; }
-  #dead { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(25, 15, 15, 0.95); padding:30px; border-radius:15px; text-align:center; display:none; width:85%; max-width:340px; z-index:20; border: 1px solid #ff0055; box-shadow: 0 0 30px rgba(255,0,85,0.3); }
-  #leaderboard { position:absolute; top:15px; right:15px; background:rgba(15,15,26,0.7); padding:12px 18px; border-radius:8px; color:#fff; display:none; font-size:12px; z-index:10; border: 1px solid rgba(255,255,255,0.1); }
-  #leaderboard b { color:#00ffcc; font-size:14px; display:block; margin-bottom:5px; text-transform: uppercase; letter-spacing: 1px; }
-  #length { position:absolute; bottom:20px; left:20px; color:#fff; font-size:13px; display:none; z-index:10; background:rgba(15,15,26,0.7); padding:8px 12px; border-radius:8px; }
-  #boost { position:absolute; bottom:25px; left:160px; width:65px; height:65px; border-radius:50%; background:rgba(0, 255, 204, 0.15); border:2px solid rgba(0, 255, 204, 0.5); display:none; z-index:10; box-shadow: 0 0 15px rgba(0,255,204,0.2); }
-  #boost:active { background:rgba(0, 255, 204, 0.4); }
-  #joystick { position:absolute; bottom:25px; right:180px; width:90px; height:90px; border-radius:50%; background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); display:none; z-index:10; }
-  #stick { position:absolute; top:20px; left:20px; width:50px; height:50px; border-radius:50%; background:rgba(0, 255, 204, 0.4); box-shadow: 0 0 10px #00ffcc; }
+  body { margin:0; overflow:hidden; background:#05050b; font-family:'Segoe UI', Arial, sans-serif; touch-action:none; position:fixed; width:100%; height:100%; }
+  #menu { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(8, 8, 16, 0.95); padding:35px; border-radius:20px; text-align:center; width:85%; max-width:350px; box-shadow:0 0 40px rgba(0, 255, 204, 0.25); border: 1px solid rgba(0, 255, 204, 0.4); z-index: 100; backdrop-filter: blur(10px); }
+  #menu h1 { color:#fff; font-size:42px; margin:0 0 25px 0; font-weight:900; text-shadow: 0 0 15px #00ffcc; letter-spacing: 3px; }
+  input, select { padding:14px; border-radius:10px; border:1px solid #222; margin:10px 0; background:#0f0f1f; color:#fff; font-size:16px; width:100%; text-align:center; outline: none; transition: 0.2s; }
+  input:focus { border-color: #00ffcc; box-shadow: 0 0 12px rgba(0,255,204,0.4); }
+  button { padding:16px 0; background:linear-gradient(135deg, #00ffcc, #0077ff); border:none; border-radius:10px; font-weight:bold; cursor:pointer; font-size:18px; color:#000; width:100%; margin-top:20px; box-shadow: 0 4px 15px rgba(0,255,204,0.3); transition: 0.2s; }
+  button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,255,204,0.5); }
+  #hud { position:absolute; top:20px; left:20px; color:#fff; font-size:18px; display:none; z-index:10; background:rgba(8,8,16,0.75); padding:10px 20px; border-radius:10px; border-left: 4px solid #00ffcc; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+  #minimap { position:absolute; bottom:25px; right:25px; width:130px; height:130px; background:rgba(5,5,10,0.7); border:2px solid rgba(0, 255, 204, 0.4); border-radius:50%; display:none; z-index:10; box-shadow: 0 0 15px rgba(0,255,204,0.1); }
+  #dead { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(20, 8, 12, 0.98); padding:35px; border-radius:20px; text-align:center; display:none; width:85%; max-width:350px; z-index:120; border: 2px solid #ff0055; box-shadow: 0 0 40px rgba(255,0,85,0.4); backdrop-filter: blur(10px); }
+  #leaderboard { position:absolute; top:20px; right:20px; background:rgba(8,8,16,0.75); padding:15px 20px; border-radius:10px; color:#fff; display:none; font-size:12px; z-index:10; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+  #leaderboard b { color:#00ffcc; font-size:14px; display:block; margin-bottom:8px; text-transform: uppercase; letter-spacing: 1px; }
+  #length { position:absolute; bottom:25px; left:25px; color:#fff; font-size:14px; display:none; z-index:10; background:rgba(8,8,16,0.75); padding:10px 15px; border-radius:10px; font-family: monospace; }
 </style>
 </head>
 <body>
 <div id="menu">
-  <h1>CYBER.IO</h1>
-  <input id="name" placeholder="Nickname" value="Player" maxlength="15">
+  <h1>CYBER ELITE</h1>
+  <input id="name" placeholder="VOTRE NOM" value="Elite_Player" maxlength="15">
   <select id="skin">
-    <option value="cyan">Neon Cyan</option>
-    <option value="magenta">Neon Magenta</option>
-    <option value="purple">Cyber Purple</option>
-    <option value="orange">Gold Tron</option>
-    <option value="green">Acid Green</option>
+    <option value="cyan">Hyper Cyan</option>
+    <option value="magenta">Pulse Magenta</option>
+    <option value="purple">Overdrive Purple</option>
+    <option value="orange">Solar Gold</option>
+    <option value="green">Toxic Green</option>
   </select>
-  <button onclick="start()">ENTRER DANS L'ARÈNE</button>
+  <button onclick="start()">DOMINER L'ARÈNE</button>
 </div>
-<div id="hud">Longueur: <span id="score">15</span></div>
+<div id="hud">SCORE: <span id="score">0</span></div>
 <canvas id="minimap"></canvas>
-<div id="leaderboard"><b>Top Arena</b><div id="leaders"></div></div>
-<div id="length">Taille: <span id="len">15</span><br>Rang: <span id="rank">1</span> / <span id="total">1</span></div>
+<div id="leaderboard"><b>Top 7 Arena</b><div id="leaders"></div></div>
+<div id="length">SIZE: <span id="len">0</span><br>RANK: <span id="rank">1</span> / <span id="total">1</span></div>
 <div id="dead">
-  <h2 style="color:#ff0055; font-size:26px; margin:0; text-shadow: 0 0 10px #ff0055;">DÉTRUIT !</h2>
-  <p style="color:#fff; font-size:16px; margin:15px 0;">Longueur finale: <span id="finalScore">0</span></p>
-  <button onclick="interstitialAd()" style="background:linear-gradient(135deg, #ff0055, #ff5500); color:#fff;">REPRENDRE</button>
+  <h2 style="color:#ff0055; font-size:32px; margin:0; font-weight:900; text-shadow: 0 0 15px #ff0055;">SYSTEM OVERRIDE</h2>
+  <p style="color:#889; font-size:16px; margin:20px 0;">Tu as fini avec une taille de: <b style="color:#fff; font-size:20px;" id="finalScore">0</b></p>
+  <button onclick="location.reload()" style="background:linear-gradient(135deg, #ff0055, #ff5500); color:#fff; width:100%;">RECHARGER LE NOYAU</button>
 </div>
-<div id="boost"></div>
-<div id="joystick"><div id="stick"></div></div>
 
 <script>
-const app = new PIXI.Application({ resizeTo: window, antialias: true, backgroundColor: 0x0a0a12 });
+const app = new PIXI.Application({ resizeTo: window, antialias: true, backgroundColor: 0x05050b });
 document.body.prepend(app.view);
 const socket = io();
-let playerId = null, game = {players:{}, orbs:[]}, mouseAngle = 0, boosting = false;
+let playerId = null, game = {players:{}, orbs:[]}, mouseAngle = 0, isBoosting = false;
+let targetZoom = 1, currentZoom = 1;
+let particles = []; // Effets d'explosions locaux dynamiques
+
 const world = new PIXI.Container();
 app.stage.addChild(world);
 
-// CORRECTION DES COULEURS : INTEGERS HEXADÉCIMAUX DIRECTS
 const SKINS = {
   cyan: { body: 0x00f3ff, glow: 0x0055ff },
   magenta: { body: 0xff0055, glow: 0xff00aa },
@@ -73,124 +65,158 @@ const SKINS = {
   green: { body: 0x00ff66, glow: 0x009933 }
 };
 
-// GRILLE CYBER NÉON MODERNE
+// Grille Radiale Technologique
 const gridBg = new PIXI.Graphics();
-const gridSize = 120;
-gridBg.lineStyle(1, 0x00ffcc, 0.12);
-for (let x = 0; x <= 5000; x += gridSize) { gridBg.moveTo(x, 0); gridBg.lineTo(x, 5000); }
-for (let y = 0; y <= 5000; y += gridSize) { gridBg.moveTo(0, y); gridBg.lineTo(5000, y); }
-gridBg.lineStyle(6, 0xff0055, 0.5);
-gridBg.drawRect(0, 0, 5000, 5000);
+gridBg.lineStyle(1.5, 0x00ffcc, 0.07);
+for (let x = 0; x <= 5000; x += 120) { gridBg.moveTo(x, 0); gridBg.lineTo(x, 5000); }
+for (let y = 0; y <= 5000; y += 120) { gridBg.moveTo(0, y); gridBg.lineTo(5000, y); }
+gridBg.lineStyle(8, 0xff0055, 0.6); gridBg.drawRect(0, 0, 5000, 5000);
 world.addChild(gridBg);
 
-// UNIQUE OBJET GRAPHICS POUR ÉVITER LES FUITES DE MÉMOIRE (PERFS OPTIMALES)
 const gameGraphics = new PIXI.Graphics();
 world.addChild(gameGraphics);
-
-let deathCount = 0;
-window.ain = window.ain || { queue: [] };
-ain.queue.push(() => ain.configAds({ siteId: 'YOUR_SITE_ID' }));
+const textContainer = new PIXI.Container();
+world.addChild(textContainer);
 
 function start() {
-  const skin = document.getElementById('skin').value;
-  joinGame(skin);
-}
-
-function joinGame(skin) {
-  socket.emit('join', { name: document.getElementById('name').value, skin });
+  socket.emit('join', { name: document.getElementById('name').value, skin: document.getElementById('skin').value });
   document.getElementById('menu').style.display = 'none';
   document.getElementById('hud').style.display = 'block';
   document.getElementById('minimap').style.display = 'block';
   document.getElementById('leaderboard').style.display = 'block';
-  document.getElementById('boost').style.display = 'block';
   document.getElementById('length').style.display = 'block';
-  if('ontouchstart' in window) document.getElementById('joystick').style.display = 'block';
-}
-
-function interstitialAd() {
-  deathCount++;
-  if (deathCount % 3 === 0) {
-    adinplay.displayInterstitialAd(() => location.reload(), () => location.reload());
-  } else {
-    location.reload();
-  }
 }
 
 socket.on('init', (id) => playerId = id);
-socket.on('state', (g) => game = g);
+socket.on('state', (g) => {
+  // Détection locale des morts pour déclencher l'effet visuel de destruction
+  Object.keys(game.players).forEach(id => {
+    if (g.players[id] && game.players[id] && !game.players[id].dead && g.players[id].dead) {
+      triggerExplosion(g.players[id].x, g.players[id].y, game.players[id].color);
+    }
+  });
+  game = g;
+});
 socket.on('dead', (data) => {
   document.getElementById('finalScore').innerText = Math.floor(data.score);
   document.getElementById('dead').style.display = 'block';
 });
 
-function updateAngle(x, y) {
-  const dx = x - window.innerWidth/2;
-  const dy = y - window.innerHeight/2;
-  mouseAngle = Math.atan2(dy, dx);
+// GESTION EXPLOSIONS PARTICULES
+function triggerExplosion(x, y, color) {
+  const pColor = parseInt(color);
+  for(let i=0; i<35; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 16,
+      vy: (Math.random() - 0.5) * 16,
+      alpha: 1,
+      size: 3 + Math.random() * 5,
+      color: pColor
+    });
+  }
 }
 
-app.view.addEventListener('mousemove', (e) => updateAngle(e.clientX, e.clientY));
+// CONTRÔLES PC (CLAVIER CONFIGURÉ FLUIDE)
+let keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+window.addEventListener('keydown', (e) => { 
+  if(e.code === 'Space') { socket.emit('boost', true); isBoosting = true; }
+  if(e.key in keys) keys[e.key] = true;
+  calculateKeyAngle();
+});
+window.addEventListener('keyup', (e) => { 
+  if(e.code === 'Space') { socket.emit('boost', false); isBoosting = false; }
+  if(e.key in keys) keys[e.key] = false;
+  calculateKeyAngle();
+});
 
-// MOBILE JOYSTICK
-let joystickActive = false;
-const joystick = document.getElementById('joystick');
-const stick = document.getElementById('stick');
-
-joystick.addEventListener('touchstart', (e) => { joystickActive = true; handleJoystick(e.touches[0]); });
-joystick.addEventListener('touchmove', (e) => { e.preventDefault(); if (joystickActive) handleJoystick(e.touches[0]); });
-joystick.addEventListener('touchend', () => { joystickActive = false; stick.style.top = '20px'; stick.style.left = '20px'; });
-
-function handleJoystick(touch) {
-  const rect = joystick.getBoundingClientRect();
-  const cx = rect.left + rect.width/2;
-  const cy = rect.top + rect.height/2;
-  const dx = touch.clientX - cx;
-  const dy = touch.clientY - cy;
-  const dist = Math.min(22, Math.hypot(dx, dy));
-  const angle = Math.atan2(dy, dx);
-  stick.style.left = 20 + Math.cos(angle) * dist + 'px';
-  stick.style.top = 20 + Math.sin(angle) * dist + 'px';
-  mouseAngle = angle;
+function calculateKeyAngle() {
+  let x = 0, y = 0;
+  if (keys.w || keys.ArrowUp) y -= 1;
+  if (keys.s || keys.ArrowDown) y += 1;
+  if (keys.a || keys.ArrowLeft) x -= 1;
+  if (keys.d || keys.ArrowRight) x += 1;
+  if (x !== 0 || y !== 0) {
+    mouseAngle = Math.atan2(y, x);
+    socket.emit('move', mouseAngle);
+  }
 }
 
-// BOOST CONTROLS
-document.getElementById('boost').addEventListener('touchstart', (e) => { e.preventDefault(); boosting = true; socket.emit('boost', true); });
-document.getElementById('boost').addEventListener('touchend', () => { boosting = false; socket.emit('boost', false); });
-app.view.addEventListener('touchstart', (e) => { if(e.touches.length === 1 && !joystickActive) { boosting = true; socket.emit('boost', true); }});
-app.view.addEventListener('touchend', () => { boosting = false; socket.emit('boost', false); });
-window.addEventListener('keydown', (e) => { if(e.code==='Space') { boosting = true; socket.emit('boost', true); }});
-window.addEventListener('keyup', (e) => { if(e.code==='Space') { boosting = false; socket.emit('boost', false); }});
+// CONTRÔLES SMARTPHONE SANS COUTURE
+let touchStart = { x: 0, y: 0 };
+window.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    touchStart.x = e.touches[0].clientX;
+    touchStart.y = e.touches[0].clientY;
+  } else {
+    socket.emit('boost', true); isBoosting = true;
+  }
+});
+window.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 1) {
+    const dx = e.touches[0].clientX - touchStart.x;
+    const dy = e.touches[0].clientY - touchStart.y;
+    if (Math.hypot(dx, dy) > 8) {
+      mouseAngle = Math.atan2(dy, dx);
+      socket.emit('move', mouseAngle);
+    }
+  }
+});
+window.addEventListener('touchend', (e) => {
+  if (e.touches.length < 2) { socket.emit('boost', false); isBoosting = false; }
+});
+window.addEventListener('mousemove', (e) => {
+  if(!keys.w && !keys.a && !keys.s && !keys.d && !keys.ArrowUp) {
+    mouseAngle = Math.atan2(e.clientY - window.innerHeight/2, e.clientX - window.innerWidth/2);
+    socket.emit('move', mouseAngle);
+  }
+});
 
-setInterval(() => { if(playerId) socket.emit('move', mouseAngle); }, 33);
+setInterval(() => { if(playerId) socket.emit('move', mouseAngle); }, 30);
 
 const minimap = document.getElementById('minimap').getContext('2d');
-document.getElementById('minimap').width = 140;
-document.getElementById('minimap').height = 140;
+document.getElementById('minimap').width = 130;
+document.getElementById('minimap').height = 130;
 
-// NETTOYAGE DES TEXTES (SUPPRESSION DES ANCIENS LABELS DU TIKER)
-const textContainer = new PIXI.Container();
-world.addChild(textContainer);
-
+// MACHINE DE RENDU PRINCIPALE
 app.ticker.add(() => {
-  // On vide le pinceau global à chaque frame
   gameGraphics.clear();
   textContainer.removeChildren();
 
-  // DESSIN DES ORBES AVEC RENDU LUMINEUX (GLOW + 3D REFLET)
+  // 1. CALCUL DE L'EFFET CYBER ZOOM PARTICULIER
+  targetZoom = isBoosting ? 0.88 : 1.05;
+  currentZoom += (targetZoom - currentZoom) * 0.08;
+  world.scale.set(currentZoom);
+
+  // 2. RENDU PARTICULES LOCALES (EXPLOSIONS)
   gameGraphics.blendMode = PIXI.BLEND_MODES.ADD;
+  particles.forEach((p, idx) => {
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= 0.94; p.vy *= 0.94; // Friction
+    p.alpha -= 0.025;
+    if(p.alpha <= 0) { particles.splice(idx, 1); return; }
+    gameGraphics.beginFill(p.color, p.alpha);
+    gameGraphics.drawCircle(p.x, p.y, p.size);
+    gameGraphics.endFill();
+  });
+
+  // 3. RENDU DES ORBES ÉNERGÉTIQUES
   game.orbs.forEach((orb) => {
     const color = parseInt(orb.color);
-    // Halo lumineux extérieur
-    gameGraphics.beginFill(color, 0.18);
-    gameGraphics.drawCircle(orb.x, orb.y, orb.size * 3.5);
+    // Halo Extérieur Pulsé
+    const pulse = 1 + Math.sin(Date.now() * 0.008) * 0.12;
+    gameGraphics.beginFill(color, 0.15); 
+    gameGraphics.drawCircle(orb.x, orb.y, orb.size * 4 * pulse); 
     gameGraphics.endFill();
-    // Coeur de l'orbe
-    gameGraphics.beginFill(color, 0.85);
-    gameGraphics.drawCircle(orb.x, orb.y, orb.size);
+    
+    // Noyau de matière
+    gameGraphics.beginFill(color, 0.95); 
+    gameGraphics.drawCircle(orb.x, orb.y, orb.size); 
     gameGraphics.endFill();
-    // Point blanc central pour l'effet de brillance
-    gameGraphics.beginFill(0xFFFFFF, 0.9);
-    gameGraphics.drawCircle(orb.x - orb.size*0.15, orb.y - orb.size*0.15, orb.size * 0.35);
+    
+    // Éclat Central Blanc
+    gameGraphics.beginFill(0xFFFFFF, 0.9); 
+    gameGraphics.drawCircle(orb.x - orb.size*0.18, orb.y - orb.size*0.18, orb.size * 0.35); 
     gameGraphics.endFill();
   });
   gameGraphics.blendMode = PIXI.BLEND_MODES.NORMAL;
@@ -198,91 +224,89 @@ app.ticker.add(() => {
   const sorted = Object.values(game.players).sort((a,b) => b.score - a.score);
   
   sorted.forEach(p => {
-    if (p.dead) return; // CORRECTION : On ne dessine pas les morts
+    if (p.dead) return;
     const colors = SKINS[p.skin] || SKINS.cyan;
 
-    // DESSIN DU CORPS (SOUPLE ET AVEC EFFET 3D)
+    // Traînée de particules de boost en temps réel
+    if (p.boostActive && Math.random() < 0.4) {
+      gameGraphics.blendMode = PIXI.BLEND_MODES.ADD;
+      gameGraphics.beginFill(colors.body, 0.4);
+      gameGraphics.drawCircle(p.x + (Math.random()-0.5)*15, p.y + (Math.random()-0.5)*15, p.size * 0.6);
+      gameGraphics.endFill();
+      gameGraphics.blendMode = PIXI.BLEND_MODES.NORMAL;
+    }
+
+    // CORPS CYBER DYNAMIQUE
     for(let i = p.segments.length - 1; i >= 0; i--) {
       const seg = p.segments[i];
-      const size = p.size * (1 - (i / Math.max(1, p.segments.length)) * 0.2);
+      const size = p.size * (1 - (i / Math.max(1, p.segments.length)) * 0.22);
       
-      // Lueur extérieure du corps
-      gameGraphics.beginFill(colors.glow, 0.25);
-      gameGraphics.drawCircle(seg.x, seg.y, size * 1.3);
+      gameGraphics.beginFill(colors.glow, 0.2); 
+      gameGraphics.drawCircle(seg.x, seg.y, size * 1.35); 
       gameGraphics.endFill();
-      // Corps principal
-      gameGraphics.beginFill(colors.body);
-      gameGraphics.drawCircle(seg.x, seg.y, size);
-      gameGraphics.endFill();
-      // Reflet brillant 3D
-      gameGraphics.beginFill(0xFFFFFF, 0.25);
-      gameGraphics.drawCircle(seg.x - size*0.2, seg.y - size*0.2, size * 0.3);
+      
+      gameGraphics.beginFill(colors.body); 
+      gameGraphics.drawCircle(seg.x, seg.y, size); 
       gameGraphics.endFill();
     }
 
-    // TÊTE
-    gameGraphics.beginFill(colors.glow, 0.3);
-    gameGraphics.drawCircle(p.x, p.y, p.size * 1.3);
+    // TÊTE DU SERPENT
+    gameGraphics.beginFill(colors.glow, 0.35); 
+    gameGraphics.drawCircle(p.x, p.y, p.size * 1.4); 
     gameGraphics.endFill();
-    gameGraphics.beginFill(colors.body);
-    gameGraphics.drawCircle(p.x, p.y, p.size);
+    
+    gameGraphics.beginFill(colors.body); 
+    gameGraphics.drawCircle(p.x, p.y, p.size); 
     gameGraphics.endFill();
 
-    // YEUX FUTURISTES (Pupilles lumineuses)
-    const eyeAngle1 = p.angle + 0.55;
-    const eyeAngle2 = p.angle - 0.55;
-    const eyeDist = p.size * 0.55;
-    const eyeSize = p.size * 0.35;
-
+    // YEUX INVERSÉS NUMÉRIQUES
+    const eye1 = p.angle + 0.48; const eye2 = p.angle - 0.48;
+    const ed = p.size * 0.52; const es = p.size * 0.36;
     gameGraphics.beginFill(0xFFFFFF);
-    gameGraphics.drawCircle(p.x + Math.cos(eyeAngle1)*eyeDist, p.y + Math.sin(eyeAngle1)*eyeDist, eyeSize);
-    gameGraphics.drawCircle(p.x + Math.cos(eyeAngle2)*eyeDist, p.y + Math.sin(eyeAngle2)*eyeDist, eyeSize);
+    gameGraphics.drawCircle(p.x + Math.cos(eye1)*ed, p.y + Math.sin(eye1)*ed, es);
+    gameGraphics.drawCircle(p.x + Math.cos(eye2)*ed, p.y + Math.sin(eye2)*ed, es);
     gameGraphics.endFill();
 
-    gameGraphics.beginFill(0x000000);
-    gameGraphics.drawCircle(p.x + Math.cos(eyeAngle1)*(eyeDist+1), p.y + Math.sin(eyeAngle1)*(eyeDist+1), eyeSize*0.5);
-    gameGraphics.drawCircle(p.x + Math.cos(eyeAngle2)*(eyeDist+1), p.y + Math.sin(eyeAngle2)*(eyeDist+1), eyeSize*0.5);
+    gameGraphics.beginFill(colors.glow);
+    gameGraphics.drawCircle(p.x + Math.cos(eye1)*(ed+1), p.y + Math.sin(eye1)*(ed+1), es*0.4);
+    gameGraphics.drawCircle(p.x + Math.cos(eye2)*(ed+1), p.y + Math.sin(eye2)*(ed+1), es*0.4);
     gameGraphics.endFill();
 
-    // NOMS DES JOUEURS
     if(p.name) {
-      const text = new PIXI.Text(p.name, {fontSize: 12, fill: 0xffffff, stroke: 0x05050a, strokeThickness: 3, fontFamily: 'Arial', fontWeight: 'bold'});
-      text.x = p.x - text.width/2;
-      text.y = p.y - p.size - 20;
+      const text = new PIXI.Text(p.name, {fontSize: 13, fill: 0xffffff, stroke: 0x010103, strokeThickness: 3.5, fontFamily: 'Arial', fontWeight: 'bold'});
+      text.x = p.x - text.width/2; text.y = p.y - p.size - 22;
       textContainer.addChild(text);
     }
 
-    // SUIVI DE CAMÉRA (FLUIDE / LERP)
+    // CAMÉRA SPRING-LERP ULTRA-FLUIDE
     if (p.id === playerId) {
-      world.x += (-p.x + window.innerWidth/2 - world.x) * 0.15;
-      world.y += (-p.y + window.innerHeight/2 - world.y) * 0.15;
+      const targetCamX = -p.x * currentZoom + window.innerWidth / 2;
+      const targetCamY = -p.y * currentZoom + window.innerHeight / 2;
+      world.x += (targetCamX - world.x) * 0.18;
+      world.y += (targetCamY - world.y) * 0.18;
+      
       document.getElementById('score').innerText = Math.floor(p.score);
       document.getElementById('len').innerText = Math.floor(p.size);
       document.getElementById('rank').innerText = sorted.filter(pl=>!pl.dead).indexOf(p) + 1;
       document.getElementById('total').innerText = sorted.filter(pl=>!pl.dead).length;
 
-      // MINIMAP CYBER
-      minimap.clearRect(0,0,140,140);
-      minimap.fillStyle = 'rgba(10,10,20,0.6)';
-      minimap.beginPath(); minimap.arc(70,70,70,0,7); minimap.fill();
-      minimap.strokeStyle = 'rgba(0, 255, 204, 0.3)'; minimap.stroke();
-      
+      // MINIMAP NÉON
+      minimap.clearRect(0,0,130,130);
+      minimap.fillStyle = 'rgba(8,8,16,0.7)';
+      minimap.beginPath(); minimap.arc(65,65,65,0,7); minimap.fill();
       Object.values(game.players).forEach(pl => {
         if (pl.dead) return;
         minimap.fillStyle = pl.id === playerId ? '#00ffcc' : '#ff0055';
-        minimap.beginPath();
-        minimap.arc(70 + (pl.x-2500)/5000*130, 70 + (pl.y-2500)/5000*130, pl.id === playerId ? 4 : 2.5, 0, 7);
-        minimap.fill();
+        minimap.beginPath(); minimap.arc(65 + (pl.x-2500)/5000*115, 65 + (pl.y-2500)/5000*115, pl.id === playerId ? 4.5 : 2.5, 0, 7); minimap.fill();
       });
     }
   });
 
-  // LEADERBOARD STYLE CYBER
-  document.getElementById('leaders').innerHTML = sorted.filter(p=>!p.dead).slice(0,10).map((p,i) =>
-    `<div style="color:${i===0?'#00ffcc':i===1?'#ff0055':i===2?'#ff8800':'#cccccc'}; font-size:11px; margin:3px 0; font-family: monospace;">
-      ${i+1}. ${p.name.substring(0,10).padEnd(11, ' ')} [${Math.floor(p.score)}]
-    </div>`
+  // METTRE À JOUR LE DASHBOARD
+  document.getElementById('leaders').innerHTML = sorted.filter(p=>!p.dead).slice(0,7).map((p,i) =>
+    `<div style="color:${i===0?'#00ffcc':i===1?'#ff0055':'#b2b2cc'}; margin:4px 0; font-family: monospace; font-size:12px;">#${i+1} ${p.name.substring(0,9).padEnd(10,'_')} [${Math.floor(p.score)}]</div>`
   ).join('');
 });
 </script>
 </body>
+</html>
