@@ -9,37 +9,44 @@ const MAP_SIZE = 5000;
 const ORB_COUNT = 400;
 const MAX_ORBS = ORB_COUNT * 2;
 const BOT_COUNT = 15;
-const DEAD_PLAYER_TTL = 5000;
-const TICK_INTERVAL = 20; // 50 ticks par seconde (plus rapide)
+const TICK_INTERVAL = 20; // 50 ticks/s
 
 const CYBER_COLORS = ['0x00ffcc', '0xff0055', '0x00f3ff', '0xff8800', '0xcc00ff', '0xffff00'];
-function getRandomColor() { return CYBER_COLORS[Math.floor(Math.random()*CYBER_COLORS.length)]; }
+function randColor() { return CYBER_COLORS[Math.floor(Math.random()*CYBER_COLORS.length)]; }
 
 let game = { players: {}, orbs: [], bots: {} };
 
+// Création des orbes
 for (let i = 0; i < ORB_COUNT; i++) {
-  game.orbs.push({ x: Math.random() * MAP_SIZE, y: Math.random() * MAP_SIZE, size: 6 + Math.random() * 5, color: getRandomColor() });
+  game.orbs.push({
+    x: Math.random() * MAP_SIZE,
+    y: Math.random() * MAP_SIZE,
+    size: 6 + Math.random() * 5,
+    color: randColor()
+  });
 }
 
+// Bots
 const BOT_NAMES = ['K1NG_SNAKE', 'N3ON_BLAD3', 'V3CTOR_X', 'CYB3R_VIP3R', 'GL1TCH_MONST3R', 'PULSE_CRAWL3R'];
 const SKIN_KEYS = ['cyan', 'magenta', 'purple', 'orange', 'green'];
 
 function createBot(id) {
   return {
     id,
-    x: Math.random()*MAP_SIZE,
-    y: Math.random()*MAP_SIZE,
-    angle: Math.random()*6.28,
-    targetAngle: Math.random()*6.28,
+    x: Math.random() * MAP_SIZE,
+    y: Math.random() * MAP_SIZE,
+    angle: Math.random() * 6.28,
+    targetAngle: Math.random() * 6.28,
     segments: [],
     size: 16,
     score: 200,
-    name: BOT_NAMES[Math.floor(Math.random()*BOT_NAMES.length)],
-    speed: 16, // plus rapide
+    name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
+    speed: 18,
     isBot: true,
-    skin: SKIN_KEYS[Math.floor(Math.random()*SKIN_KEYS.length)],
-    color: getRandomColor(),
-    dead: false
+    skin: SKIN_KEYS[Math.floor(Math.random() * SKIN_KEYS.length)],
+    color: randColor(),
+    dead: false,
+    deadSince: null
   };
 }
 
@@ -48,47 +55,47 @@ for (let i = 0; i < BOT_COUNT; i++) {
   game.bots[id] = createBot(id);
 }
 
+// Socket
 io.on('connection', (socket) => {
   socket.on('join', (data) => {
-    let player = game.players[socket.id];
-    if (player) {
-      player.x = Math.random()*3000 + 1000;
-      player.y = Math.random()*3000 + 1000;
-      player.angle = 0;
-      player.targetAngle = 0;
-      player.segments = [];
-      player.size = 16;
-      player.score = 150;
-      player.name = data.name?.substring(0,15) || 'Cyber_Anon';
-      player.skin = data.skin || 'cyan';
-      player.color = getRandomColor();
-      player.dead = false;
-      player.deadSince = null;
-      player.spawnTime = Date.now();
-      player.boost = false;
-      player.boostActive = false;
-      player.speed = 18; // vitesse de base augmentée
+    let p = game.players[socket.id];
+    if (p) {
+      // Réinitialisation
+      p.x = Math.random() * 3000 + 1000;
+      p.y = Math.random() * 3000 + 1000;
+      p.angle = 0.3;
+      p.targetAngle = 0.3;
+      p.segments = [];
+      p.size = 16;
+      p.score = 150;
+      p.name = data.name?.substring(0,15) || 'Anon';
+      p.skin = data.skin || 'cyan';
+      p.color = randColor();
+      p.dead = false;
+      p.deadSince = null;
+      p.boost = false;
+      p.boostActive = false;
+      p.speed = 30; // vitesse élevée
     } else {
-      player = {
+      p = {
         id: socket.id,
-        x: Math.random()*3000 + 1000,
-        y: Math.random()*3000 + 1000,
-        angle: 0,
-        targetAngle: 0,
+        x: Math.random() * 3000 + 1000,
+        y: Math.random() * 3000 + 1000,
+        angle: 0.3,
+        targetAngle: 0.3,
         segments: [],
         size: 16,
         score: 150,
-        name: data.name?.substring(0,15) || 'Cyber_Anon',
-        speed: 18,
+        name: data.name?.substring(0,15) || 'Anon',
+        speed: 30,
         boost: false,
         boostActive: false,
         skin: data.skin || 'cyan',
-        color: getRandomColor(),
+        color: randColor(),
         dead: false,
-        deadSince: null,
-        spawnTime: Date.now()
+        deadSince: null
       };
-      game.players[socket.id] = player;
+      game.players[socket.id] = p;
     }
     socket.emit('init', socket.id);
   });
@@ -98,16 +105,16 @@ io.on('connection', (socket) => {
     if (p && p.dead) {
       p.dead = false;
       p.deadSince = null;
-      p.x = Math.random()*3000 + 1000;
-      p.y = Math.random()*3000 + 1000;
-      p.angle = 0;
-      p.targetAngle = 0;
+      p.x = Math.random() * 3000 + 1000;
+      p.y = Math.random() * 3000 + 1000;
+      p.angle = 0.3;
+      p.targetAngle = 0.3;
       p.segments = [];
       p.size = 16;
       p.score = 150;
       p.boost = false;
       p.boostActive = false;
-      p.speed = 18;
+      p.speed = 30;
     }
   });
 
@@ -124,51 +131,53 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     const p = game.players[socket.id];
     if (p && !p.dead) {
-      p.segments.forEach((seg, i) => { if (i % 2 === 0) game.orbs.push({ x: seg.x, y: seg.y, size: 8, color: p.color }); });
+      p.segments.forEach((seg, i) => {
+        if (i % 2 === 0) game.orbs.push({ x: seg.x, y: seg.y, size: 8, color: p.color });
+      });
     }
     delete game.players[socket.id];
   });
 });
 
-// Boucle de jeu plus rapide (20ms)
+// Boucle de jeu
 setInterval(() => {
-  // Absorption des orbes
+  // 1. Manger les orbes (humains)
   for (let id in game.players) {
     const p = game.players[id];
     if (p.dead) continue;
     for (let idx = game.orbs.length - 1; idx >= 0; idx--) {
       const o = game.orbs[idx];
       const dist = Math.hypot(p.x - o.x, p.y - o.y);
-      if (dist < p.size * 3.2) {
-        o.x += (p.x - o.x) * 0.25;
-        o.y += (p.y - o.y) * 0.25;
-      }
       if (dist < p.size + o.size + 6) {
         p.score += 25;
         p.size += 0.35;
-        game.orbs[idx] = { x: Math.random()*MAP_SIZE, y: Math.random()*MAP_SIZE, size: 6+Math.random()*5, color: getRandomColor() };
+        game.orbs[idx] = { x: Math.random()*MAP_SIZE, y: Math.random()*MAP_SIZE, size: 6+Math.random()*5, color: randColor() };
+      } else if (dist < p.size * 3.2) {
+        // Magnétisme
+        o.x += (p.x - o.x) * 0.25;
+        o.y += (p.y - o.y) * 0.25;
       }
     }
   }
 
-  // Déplacement des joueurs humains
+  // 2. Déplacement humains
   for (let id in game.players) {
     const p = game.players[id];
     if (p.dead) continue;
 
     if (p.boost && p.score > 50) {
-      p.speed = 28; // boost plus rapide
+      p.speed = 50;
       p.score -= 0.7;
       p.size = Math.max(16, p.size - 0.02);
       p.boostActive = true;
     } else {
-      p.speed = 18;
+      p.speed = 30;
       p.boostActive = false;
     }
 
-    let angleDiff = p.targetAngle - p.angle;
-    angleDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
-    p.angle += angleDiff * 0.25;
+    let diff = p.targetAngle - p.angle;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    p.angle += diff * 0.25;
 
     p.x += Math.cos(p.angle) * p.speed;
     p.y += Math.sin(p.angle) * p.speed;
@@ -177,76 +186,33 @@ setInterval(() => {
     manageSegments(p);
   }
 
-  // Bots
-  const BOT_VIEW_RANGE = 500;
-  const BOT_EDGE_MARGIN = 300;
+  // 3. Bots (simplifiés)
   const allEntities = { ...game.players, ...game.bots };
-
   for (let id in game.bots) {
     const b = game.bots[id];
-    let overridden = false;
-
-    for (let oid in allEntities) {
-      if (oid === id) continue;
-      const o = allEntities[oid];
-      if (o.dead) continue;
-      const dist = Math.hypot(b.x - o.x, b.y - o.y);
-      if (dist < BOT_VIEW_RANGE && o.size > b.size * 1.25) {
-        b.targetAngle = Math.atan2(b.y - o.y, b.x - o.x);
-        overridden = true;
-        break;
-      }
-    }
-
-    if (!overridden) {
-      for (let oid in allEntities) {
-        if (oid === id) continue;
-        const o = allEntities[oid];
-        if (o.dead) continue;
-        const dist = Math.hypot(b.x - o.x, b.y - o.y);
-        if (dist < BOT_VIEW_RANGE * 0.6 && b.size > o.size * 1.3 && Math.random() < 0.5) {
-          b.targetAngle = Math.atan2(o.y - b.y, o.x - b.x);
-          overridden = true;
-          break;
-        }
-      }
-    }
-
-    if (!overridden && Math.random() < 0.06 && game.orbs.length > 0) {
-      let nearest = null, nearestDist = Infinity;
-      for (let i = 0; i < game.orbs.length; i += 4) {
-        const o = game.orbs[i];
-        const d = Math.hypot(b.x - o.x, b.y - o.y);
-        if (d < nearestDist) { nearestDist = d; nearest = o; }
-      }
-      if (nearest) b.targetAngle = Math.atan2(nearest.y - b.y, nearest.x - b.x);
-    }
-
-    if (b.x < BOT_EDGE_MARGIN) b.targetAngle = 0;
-    else if (b.x > MAP_SIZE - BOT_EDGE_MARGIN) b.targetAngle = Math.PI;
-    if (b.y < BOT_EDGE_MARGIN) b.targetAngle = Math.PI/2;
-    else if (b.y > MAP_SIZE - BOT_EDGE_MARGIN) b.targetAngle = -Math.PI/2;
-
+    // Mouvement aléatoire + évitement basique
+    if (Math.random() < 0.02) b.targetAngle = Math.random() * 6.28;
     let diff = b.targetAngle - b.angle;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    b.angle += diff * 0.22;
+    b.angle += diff * 0.2;
     b.x += Math.cos(b.angle) * b.speed;
     b.y += Math.sin(b.angle) * b.speed;
     b.x = Math.max(b.size, Math.min(MAP_SIZE - b.size, b.x));
     b.y = Math.max(b.size, Math.min(MAP_SIZE - b.size, b.y));
 
+    // Manger des orbes
     for (let idx = game.orbs.length - 1; idx >= 0; idx--) {
       const o = game.orbs[idx];
       if (Math.hypot(b.x - o.x, b.y - o.y) < b.size + o.size + 8) {
         b.score += 15;
         b.size += 0.25;
-        game.orbs[idx] = { x: Math.random()*MAP_SIZE, y: Math.random()*MAP_SIZE, size: 6+Math.random()*5, color: getRandomColor() };
+        game.orbs[idx] = { x: Math.random()*MAP_SIZE, y: Math.random()*MAP_SIZE, size: 6+Math.random()*5, color: randColor() };
       }
     }
     manageSegments(b);
   }
 
-  // Collisions (optimisées)
+  // 4. Collisions (mort)
   const toKill = [];
   const all = { ...game.players, ...game.bots };
   for (let id1 in all) {
@@ -256,9 +222,9 @@ setInterval(() => {
       if (id1 === id2) continue;
       const p2 = all[id2];
       if (p2.dead) continue;
-      if (Math.hypot(p1.x - p2.x, p1.y - p2.y) < p1.size + p2.size + 30) {
+      if (Math.hypot(p1.x - p2.x, p1.y - p2.y) < p1.size + p2.size + 20) {
         for (let seg of p2.segments) {
-          if (Math.hypot(p1.x - seg.x, p1.y - seg.y) < p1.size * 0.85) {
+          if (Math.hypot(p1.x - seg.x, p1.y - seg.y) < p1.size * 0.8) {
             toKill.push(id1);
             break;
           }
@@ -284,31 +250,33 @@ setInterval(() => {
     }
   });
 
+  // Nettoyage des morts trop vieux
   for (let id in game.players) {
     const p = game.players[id];
-    if (p.dead && p.deadSince && Date.now() - p.deadSince > DEAD_PLAYER_TTL) {
+    if (p.dead && p.deadSince && Date.now() - p.deadSince > 5000) {
       delete game.players[id];
     }
   }
 
+  // Limiter les orbes
   if (game.orbs.length > MAX_ORBS) {
     game.orbs.splice(0, game.orbs.length - MAX_ORBS);
   }
 
-  const activePlayers = {};
-  for (let id in game.players) activePlayers[id] = game.players[id];
-  for (let id in game.bots) activePlayers[id] = game.bots[id];
-  io.emit('state', { players: activePlayers, orbs: game.orbs });
+  // Envoyer l'état
+  const active = { ...game.players };
+  for (let id in game.bots) active[id] = game.bots[id];
+  io.emit('state', { players: active, orbs: game.orbs });
 }, TICK_INTERVAL);
 
 function manageSegments(p) {
   if (p.segments.length === 0) p.segments.push({x: p.x, y: p.y});
-  const lastSeg = p.segments[p.segments.length - 1];
-  if (Math.hypot(p.x - lastSeg.x, p.y - lastSeg.y) > p.size * 0.25) {
+  const last = p.segments[p.segments.length - 1];
+  if (Math.hypot(p.x - last.x, p.y - last.y) > p.size * 0.25) {
     p.segments.push({x: p.x, y: p.y});
   }
-  const maxSegments = Math.floor(18 + (p.score * 0.1));
-  while (p.segments.length > maxSegments) p.segments.shift();
+  const maxSeg = Math.floor(18 + (p.score * 0.1));
+  while (p.segments.length > maxSeg) p.segments.shift();
 }
 
-http.listen(PORT, () => console.log(`🚀 SERVEUR ULTRA RAPIDE SUR PORT ${PORT}`));
+http.listen(PORT, () => console.log(`🚀 Serveur lancé sur le port ${PORT}`));
