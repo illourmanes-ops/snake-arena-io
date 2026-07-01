@@ -10,13 +10,13 @@ const ORB_COUNT = 400;
 const MAX_ORBS = ORB_COUNT * 2;
 const BOT_COUNT = 15;
 const DEAD_PLAYER_TTL = 5000;
+const TICK_INTERVAL = 20; // 50 ticks par seconde (plus rapide)
 
 const CYBER_COLORS = ['0x00ffcc', '0xff0055', '0x00f3ff', '0xff8800', '0xcc00ff', '0xffff00'];
 function getRandomColor() { return CYBER_COLORS[Math.floor(Math.random()*CYBER_COLORS.length)]; }
 
 let game = { players: {}, orbs: [], bots: {} };
 
-// Création des orbes initiaux
 for (let i = 0; i < ORB_COUNT; i++) {
   game.orbs.push({ x: Math.random() * MAP_SIZE, y: Math.random() * MAP_SIZE, size: 6 + Math.random() * 5, color: getRandomColor() });
 }
@@ -35,7 +35,7 @@ function createBot(id) {
     size: 16,
     score: 200,
     name: BOT_NAMES[Math.floor(Math.random()*BOT_NAMES.length)],
-    speed: 11.5,
+    speed: 16, // plus rapide
     isBot: true,
     skin: SKIN_KEYS[Math.floor(Math.random()*SKIN_KEYS.length)],
     color: getRandomColor(),
@@ -48,15 +48,10 @@ for (let i = 0; i < BOT_COUNT; i++) {
   game.bots[id] = createBot(id);
 }
 
-// --- Gestion des connexions ---
 io.on('connection', (socket) => {
-  console.log('🟢 Nouvelle connexion:', socket.id);
-
   socket.on('join', (data) => {
-    console.log(`📥 Join de ${socket.id} avec nom ${data.name}`);
     let player = game.players[socket.id];
     if (player) {
-      // Réinitialisation
       player.x = Math.random()*3000 + 1000;
       player.y = Math.random()*3000 + 1000;
       player.angle = 0;
@@ -72,6 +67,7 @@ io.on('connection', (socket) => {
       player.spawnTime = Date.now();
       player.boost = false;
       player.boostActive = false;
+      player.speed = 18; // vitesse de base augmentée
     } else {
       player = {
         id: socket.id,
@@ -83,7 +79,7 @@ io.on('connection', (socket) => {
         size: 16,
         score: 150,
         name: data.name?.substring(0,15) || 'Cyber_Anon',
-        speed: 12,
+        speed: 18,
         boost: false,
         boostActive: false,
         skin: data.skin || 'cyan',
@@ -95,7 +91,6 @@ io.on('connection', (socket) => {
       game.players[socket.id] = player;
     }
     socket.emit('init', socket.id);
-    console.log(`✅ Joueur ${socket.id} initialisé`);
   });
 
   socket.on('respawn', () => {
@@ -112,27 +107,21 @@ io.on('connection', (socket) => {
       p.score = 150;
       p.boost = false;
       p.boostActive = false;
-      p.speed = 12;
-      console.log(`♻️ Respawn de ${socket.id}`);
+      p.speed = 18;
     }
   });
 
   socket.on('move', (angle) => {
     const p = game.players[socket.id];
-    if (p && !p.dead) {
-      p.targetAngle = angle;
-    }
+    if (p && !p.dead) p.targetAngle = angle;
   });
 
   socket.on('boost', (b) => {
     const p = game.players[socket.id];
-    if (p && !p.dead) {
-      p.boost = b;
-    }
+    if (p && !p.dead) p.boost = b;
   });
 
   socket.on('disconnect', () => {
-    console.log('🔴 Déconnexion:', socket.id);
     const p = game.players[socket.id];
     if (p && !p.dead) {
       p.segments.forEach((seg, i) => { if (i % 2 === 0) game.orbs.push({ x: seg.x, y: seg.y, size: 8, color: p.color }); });
@@ -141,9 +130,9 @@ io.on('connection', (socket) => {
   });
 });
 
-// --- Boucle de jeu (30ms) ---
+// Boucle de jeu plus rapide (20ms)
 setInterval(() => {
-  // Absorption des orbes par les joueurs humains
+  // Absorption des orbes
   for (let id in game.players) {
     const p = game.players[id];
     if (p.dead) continue;
@@ -168,12 +157,12 @@ setInterval(() => {
     if (p.dead) continue;
 
     if (p.boost && p.score > 50) {
-      p.speed = 21;
+      p.speed = 28; // boost plus rapide
       p.score -= 0.7;
       p.size = Math.max(16, p.size - 0.02);
       p.boostActive = true;
     } else {
-      p.speed = 12.5;
+      p.speed = 18;
       p.boostActive = false;
     }
 
@@ -197,7 +186,6 @@ setInterval(() => {
     const b = game.bots[id];
     let overridden = false;
 
-    // Fuir les plus gros
     for (let oid in allEntities) {
       if (oid === id) continue;
       const o = allEntities[oid];
@@ -210,7 +198,6 @@ setInterval(() => {
       }
     }
 
-    // Chasser les plus petits
     if (!overridden) {
       for (let oid in allEntities) {
         if (oid === id) continue;
@@ -225,7 +212,6 @@ setInterval(() => {
       }
     }
 
-    // Cibler l'orbe le plus proche
     if (!overridden && Math.random() < 0.06 && game.orbs.length > 0) {
       let nearest = null, nearestDist = Infinity;
       for (let i = 0; i < game.orbs.length; i += 4) {
@@ -236,7 +222,6 @@ setInterval(() => {
       if (nearest) b.targetAngle = Math.atan2(nearest.y - b.y, nearest.x - b.x);
     }
 
-    // Évitement des bords
     if (b.x < BOT_EDGE_MARGIN) b.targetAngle = 0;
     else if (b.x > MAP_SIZE - BOT_EDGE_MARGIN) b.targetAngle = Math.PI;
     if (b.y < BOT_EDGE_MARGIN) b.targetAngle = Math.PI/2;
@@ -250,7 +235,6 @@ setInterval(() => {
     b.x = Math.max(b.size, Math.min(MAP_SIZE - b.size, b.x));
     b.y = Math.max(b.size, Math.min(MAP_SIZE - b.size, b.y));
 
-    // Manger les orbes
     for (let idx = game.orbs.length - 1; idx >= 0; idx--) {
       const o = game.orbs[idx];
       if (Math.hypot(b.x - o.x, b.y - o.y) < b.size + o.size + 8) {
@@ -262,7 +246,7 @@ setInterval(() => {
     manageSegments(b);
   }
 
-  // Collisions (marge réduite)
+  // Collisions (optimisées)
   const toKill = [];
   const all = { ...game.players, ...game.bots };
   for (let id1 in all) {
@@ -297,32 +281,26 @@ setInterval(() => {
       p.dead = true;
       p.deadSince = Date.now();
       io.to(id).emit('dead', { score: p.score });
-      console.log(`💀 Joueur ${id} est mort`);
     }
   });
 
-  // Nettoyage des joueurs morts trop vieux
   for (let id in game.players) {
     const p = game.players[id];
     if (p.dead && p.deadSince && Date.now() - p.deadSince > DEAD_PLAYER_TTL) {
       delete game.players[id];
-      console.log(`🧹 Joueur mort ${id} supprimé (timeout)`);
     }
   }
 
-  // Limiter le nombre d'orbes
   if (game.orbs.length > MAX_ORBS) {
     game.orbs.splice(0, game.orbs.length - MAX_ORBS);
   }
 
-  // Envoyer l'état à tous
   const activePlayers = {};
   for (let id in game.players) activePlayers[id] = game.players[id];
   for (let id in game.bots) activePlayers[id] = game.bots[id];
   io.emit('state', { players: activePlayers, orbs: game.orbs });
-}, 30);
+}, TICK_INTERVAL);
 
-// --- Gestion des segments (optimisée) ---
 function manageSegments(p) {
   if (p.segments.length === 0) p.segments.push({x: p.x, y: p.y});
   const lastSeg = p.segments[p.segments.length - 1];
@@ -333,4 +311,4 @@ function manageSegments(p) {
   while (p.segments.length > maxSegments) p.segments.shift();
 }
 
-http.listen(PORT, () => console.log(`🚀 Serveur amélioré sur le port ${PORT}`));
+http.listen(PORT, () => console.log(`🚀 SERVEUR ULTRA RAPIDE SUR PORT ${PORT}`));
