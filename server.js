@@ -94,17 +94,65 @@ setInterval(() => {
     manageSegments(p);
   }
 
-  // LOGIQUE TRAJECTOIRE BOTS
+  // LOGIQUE TRAJECTOIRE BOTS — IA améliorée : évitement des bords, ciblage intelligent,
+  // fuite face à un adversaire plus gros, chasse d'un adversaire plus petit à proximité
+  const BOT_VIEW_RANGE = 500;
+  const BOT_EDGE_MARGIN = 300;
+  const allEntities = {...game.players, ...game.bots};
+
   for (let id in game.bots) {
     const b = game.bots[id];
-    if(Math.random() < 0.04 && game.orbs.length > 0) {
-      let target = game.orbs[Math.floor(Math.random()*game.orbs.length)];
-      b.targetAngle = Math.atan2(target.y - b.y, target.x - b.x);
+    let overridden = false;
+
+    // 1. Priorité absolue : fuir un adversaire nettement plus gros à proximité
+    for (let oid in allEntities) {
+      if (oid === id) continue;
+      const o = allEntities[oid]; if (o.dead) continue;
+      const dist = Math.hypot(b.x - o.x, b.y - o.y);
+      if (dist < BOT_VIEW_RANGE && o.size > b.size * 1.25) {
+        b.targetAngle = Math.atan2(b.y - o.y, b.x - o.x); // direction opposée
+        overridden = true;
+        break;
+      }
     }
+
+    // 2. Sinon, chasser un adversaire plus petit à proximité (comportement agressif)
+    if (!overridden) {
+      for (let oid in allEntities) {
+        if (oid === id) continue;
+        const o = allEntities[oid]; if (o.dead) continue;
+        const dist = Math.hypot(b.x - o.x, b.y - o.y);
+        if (dist < BOT_VIEW_RANGE * 0.6 && b.size > o.size * 1.3 && Math.random() < 0.5) {
+          b.targetAngle = Math.atan2(o.y - b.y, o.x - b.x);
+          overridden = true;
+          break;
+        }
+      }
+    }
+
+    // 3. Sinon, viser l'orbe le plus proche plutôt qu'un orbe aléatoire
+    if (!overridden && Math.random() < 0.06 && game.orbs.length > 0) {
+      let nearest = null, nearestDist = Infinity;
+      for (let i = 0; i < game.orbs.length; i += 4) { // échantillonnage pour rester léger en perf
+        const o = game.orbs[i];
+        const d = Math.hypot(b.x - o.x, b.y - o.y);
+        if (d < nearestDist) { nearestDist = d; nearest = o; }
+      }
+      if (nearest) b.targetAngle = Math.atan2(nearest.y - b.y, nearest.x - b.x);
+    }
+
+    // 4. Évitement des bords de map : force la direction vers le centre si trop proche du bord
+    if (b.x < BOT_EDGE_MARGIN) b.targetAngle = 0;
+    else if (b.x > MAP_SIZE - BOT_EDGE_MARGIN) b.targetAngle = Math.PI;
+    if (b.y < BOT_EDGE_MARGIN) b.targetAngle = Math.PI / 2;
+    else if (b.y > MAP_SIZE - BOT_EDGE_MARGIN) b.targetAngle = -Math.PI / 2;
+
     let diff = b.targetAngle - b.angle;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
     b.angle += diff * 0.22;
     b.x += Math.cos(b.angle) * b.speed; b.y += Math.sin(b.angle) * b.speed;
+    b.x = Math.max(b.size, Math.min(MAP_SIZE - b.size, b.x));
+    b.y = Math.max(b.size, Math.min(MAP_SIZE - b.size, b.y));
 
     game.orbs.forEach((o, idx) => {
       if (Math.hypot(b.x - o.x, b.y - o.y) < b.size + o.size + 8) {
