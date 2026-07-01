@@ -238,6 +238,36 @@
     pointer-events: none;
     box-shadow: inset 0 0 120px rgba(255,0,85,0.35);
   }
+
+  /* Joystick virtuel */
+  #joystickZone {
+    display: none;
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.3);
+    z-index: 25;
+    touch-action: none;
+  }
+  #joystickKnob {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(0,243,255,0.6);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    box-shadow: 0 0 20px rgba(0,243,255,0.3);
+  }
+  @media (pointer: coarse) {
+    #joystickZone { display: block; }
+  }
 </style>
 </head>
 <body>
@@ -291,6 +321,11 @@
   </div>
 </div>
 
+<!-- Joystick -->
+<div id="joystickZone">
+  <div id="joystickKnob"></div>
+</div>
+
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.2/pixi.min.js"></script>
 
@@ -303,7 +338,6 @@
       document.getElementById('skin').value = dot.dataset.skin;
     });
   });
-  // Le respawn est géré dans game.js
 </script>
 <script src="game.js"></script>
 </body>
