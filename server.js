@@ -9,14 +9,13 @@ const MAP_SIZE = 5000;
 const ORB_COUNT = 400;
 const MAX_ORBS = ORB_COUNT * 2;
 const BOT_COUNT = 15;
-const TICK_INTERVAL = 20; // 50 ticks/s
+const TICK_INTERVAL = 20;
 
 const CYBER_COLORS = ['0x00ffcc', '0xff0055', '0x00f3ff', '0xff8800', '0xcc00ff', '0xffff00'];
 function randColor() { return CYBER_COLORS[Math.floor(Math.random()*CYBER_COLORS.length)]; }
 
 let game = { players: {}, orbs: [], bots: {} };
 
-// Création des orbes
 for (let i = 0; i < ORB_COUNT; i++) {
   game.orbs.push({
     x: Math.random() * MAP_SIZE,
@@ -26,7 +25,6 @@ for (let i = 0; i < ORB_COUNT; i++) {
   });
 }
 
-// Bots
 const BOT_NAMES = ['K1NG_SNAKE', 'N3ON_BLAD3', 'V3CTOR_X', 'CYB3R_VIP3R', 'GL1TCH_MONST3R', 'PULSE_CRAWL3R'];
 const SKIN_KEYS = ['cyan', 'magenta', 'purple', 'orange', 'green'];
 
@@ -55,7 +53,6 @@ for (let i = 0; i < BOT_COUNT; i++) {
   game.bots[id] = createBot(id);
 }
 
-// Socket
 io.on('connection', (socket) => {
   socket.on('join', (data) => {
     let p = game.players[socket.id];
@@ -75,7 +72,7 @@ io.on('connection', (socket) => {
       p.deadSince = null;
       p.boost = false;
       p.boostActive = false;
-      p.speed = 30; // vitesse élevée
+      p.speed = 30;
     } else {
       p = {
         id: socket.id,
@@ -153,7 +150,6 @@ setInterval(() => {
         p.size += 0.35;
         game.orbs[idx] = { x: Math.random()*MAP_SIZE, y: Math.random()*MAP_SIZE, size: 6+Math.random()*5, color: randColor() };
       } else if (dist < p.size * 3.2) {
-        // Magnétisme
         o.x += (p.x - o.x) * 0.25;
         o.y += (p.y - o.y) * 0.25;
       }
@@ -190,7 +186,6 @@ setInterval(() => {
   const allEntities = { ...game.players, ...game.bots };
   for (let id in game.bots) {
     const b = game.bots[id];
-    // Mouvement aléatoire + évitement basique
     if (Math.random() < 0.02) b.targetAngle = Math.random() * 6.28;
     let diff = b.targetAngle - b.angle;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
@@ -200,7 +195,6 @@ setInterval(() => {
     b.x = Math.max(b.size, Math.min(MAP_SIZE - b.size, b.x));
     b.y = Math.max(b.size, Math.min(MAP_SIZE - b.size, b.y));
 
-    // Manger des orbes
     for (let idx = game.orbs.length - 1; idx >= 0; idx--) {
       const o = game.orbs[idx];
       if (Math.hypot(b.x - o.x, b.y - o.y) < b.size + o.size + 8) {
@@ -212,7 +206,7 @@ setInterval(() => {
     manageSegments(b);
   }
 
-  // 4. Collisions (mort)
+  // 4. Collisions
   const toKill = [];
   const all = { ...game.players, ...game.bots };
   for (let id1 in all) {
@@ -250,7 +244,7 @@ setInterval(() => {
     }
   });
 
-  // Nettoyage des morts trop vieux
+  // Nettoyage des morts
   for (let id in game.players) {
     const p = game.players[id];
     if (p.dead && p.deadSince && Date.now() - p.deadSince > 5000) {
@@ -258,12 +252,10 @@ setInterval(() => {
     }
   }
 
-  // Limiter les orbes
   if (game.orbs.length > MAX_ORBS) {
     game.orbs.splice(0, game.orbs.length - MAX_ORBS);
   }
 
-  // Envoyer l'état
   const active = { ...game.players };
   for (let id in game.bots) active[id] = game.bots[id];
   io.emit('state', { players: active, orbs: game.orbs });
