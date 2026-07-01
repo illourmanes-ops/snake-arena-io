@@ -1,5 +1,5 @@
 // Force la connexion sur l'URL de ton projet Render
-const socket = io("https://ake-arena-io.onrender.com", {
+const socket = io("https://snake-arena-io.onrender.com", {
   transports: ['websocket', 'polling'],
   upgrade: true
 });
@@ -248,4 +248,3 @@ app.ticker.add(() => {
     `<div style="color:${i===0?'#00ffcc':i===1?'#ff0055':'#b2b2cc'}; margin:4px 0; font-family: monospace;">#${i+1} ${p.name.substring(0,9).padEnd(10,'_')} [${Math.floor(p.score)}]</div>`
   ).join('');
 });
-                                          
