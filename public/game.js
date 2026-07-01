@@ -1,19 +1,37 @@
-// Connexion au serveur (changez l'URL si nécessaire)
+// Connexion au serveur
 const socket = io("https://snake-arena-io.onrender.com", {
   transports: ['websocket', 'polling'],
   upgrade: true
 });
 
+// Éléments du DOM
+const menu = document.getElementById('menu');
+const startBtn = document.getElementById('startBtn');
+const nameInput = document.getElementById('name');
+const skinInput = document.getElementById('skin');
+const scoreEl = document.getElementById('score');
+const rankEl = document.getElementById('rank');
+const totalEl = document.getElementById('total');
+const lenEl = document.getElementById('len');
+const speedEl = document.getElementById('speed');
+const leadersEl = document.getElementById('leaders');
+const minimapCanvas = document.getElementById('minimap');
+const deadScreen = document.getElementById('dead');
+const finalScoreEl = document.getElementById('finalScore');
+const respawnBtn = document.getElementById('respawnBtn');
+const joystickZone = document.getElementById('joystickZone');
+const joystickKnob = document.getElementById('joystickKnob');
+
 // Gestion du menu
 socket.on('connect', () => {
   console.log("✅ Connecté");
-  document.getElementById('menu').style.display = 'flex';
+  menu.style.display = 'flex';
 });
 socket.on('connect_error', () => {
-  document.getElementById('menu').style.display = 'flex';
+  menu.style.display = 'flex';
 });
 
-// Gestion des erreurs fatales
+// Erreurs fatales
 window.addEventListener('error', (e) => {
   const box = document.createElement('div');
   box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#ff0055;color:#fff;padding:12px;font-family:monospace;';
@@ -33,6 +51,7 @@ let isBoosting = false;
 let currentZoom = 1;
 let particles = [];
 let isConnected = false;
+let reconnectTimer = null;
 
 const world = new PIXI.Container();
 app.stage.addChild(world);
@@ -60,20 +79,22 @@ world.addChild(textContainer);
 const textCache = new Map();
 
 // Bouton start
-document.getElementById('startBtn').addEventListener('click', () => {
-  const name = document.getElementById('name').value.trim() || 'Anon';
-  const skin = document.getElementById('skin').value;
+startBtn.addEventListener('click', () => {
+  const name = nameInput.value.trim() || 'Anon';
+  const skin = skinInput.value;
   socket.emit('join', { name, skin });
-  document.getElementById('menu').style.display = 'none';
+  menu.style.display = 'none';
   document.getElementById('hud').style.display = 'block';
   document.getElementById('length').style.display = 'block';
   document.getElementById('leaderboard').style.display = 'block';
   document.getElementById('minimap').style.display = 'block';
+  // Afficher le joystick sur mobile (déjà via CSS)
 });
 
-document.getElementById('respawnBtn').addEventListener('click', () => {
+// Respawn
+respawnBtn.addEventListener('click', () => {
   socket.emit('respawn');
-  document.getElementById('dead').style.display = 'none';
+  deadScreen.style.display = 'none';
   document.getElementById('hud').style.display = 'block';
   document.getElementById('length').style.display = 'block';
   document.getElementById('leaderboard').style.display = 'block';
@@ -85,26 +106,36 @@ socket.on('init', (id) => {
   playerId = id;
   isConnected = true;
   sendMoveIfChanged(0);
+  // Efface le timer de reconnexion
+  if (reconnectTimer) clearTimeout(reconnectTimer);
 });
 
 socket.on('state', (g) => {
+  // Détection des morts
   Object.keys(game.players).forEach(id => {
     if (g.players[id] && game.players[id] && !game.players[id].dead && g.players[id].dead) {
       triggerExplosion(g.players[id].x, g.players[id].y, game.players[id].color);
     }
   });
   game = g;
+
+  // Vérification : le joueur local est-il présent ?
   if (playerId && !game.players[playerId]) {
-    socket.emit('join', {
-      name: document.getElementById('name').value.trim() || 'Anon',
-      skin: document.getElementById('skin').value
-    });
+    console.warn("⚠️ Joueur local absent, rejoin dans 500ms");
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(() => {
+      socket.emit('join', {
+        name: nameInput.value.trim() || 'Anon',
+        skin: skinInput.value
+      });
+      reconnectTimer = null;
+    }, 500);
   }
 });
 
 socket.on('dead', (data) => {
-  document.getElementById('finalScore').innerText = Math.floor(data.score);
-  document.getElementById('dead').style.display = 'block';
+  finalScoreEl.innerText = Math.floor(data.score);
+  deadScreen.style.display = 'block';
 });
 
 function triggerExplosion(x, y, color) {
@@ -121,7 +152,7 @@ function triggerExplosion(x, y, color) {
   }
 }
 
-// Contrôles
+// --- Contrôles clavier ---
 let keys = { w:false, a:false, s:false, d:false, z:false, q:false, ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false };
 let isTouchDevice = false;
 
@@ -159,45 +190,66 @@ function sendMoveIfChanged(angle) {
   }
 }
 
-// Tactile
-let touchCount = 0, touchStartX = 0, touchStartY = 0;
-window.addEventListener('touchstart', (e) => {
-  isTouchDevice = true;
-  touchCount = e.touches.length;
-  if (touchCount === 1) {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-  } else if (touchCount >= 2) {
-    socket.emit('boost', true);
-    isBoosting = true;
-  }
-}, {passive: true});
-window.addEventListener('touchmove', (e) => {
-  const newCount = e.touches.length;
-  if (newCount !== touchCount) {
-    touchCount = newCount;
-    if (touchCount >= 2) { socket.emit('boost', true); isBoosting = true; }
-    else { socket.emit('boost', false); isBoosting = false; }
-  }
-  if (touchCount === 1) {
-    const dx = e.touches[0].clientX - touchStartX;
-    const dy = e.touches[0].clientY - touchStartY;
-    if (Math.hypot(dx, dy) > 5) {
-      mouseAngle = Math.atan2(dy, dx);
-      sendMoveIfChanged(mouseAngle);
-    }
-  }
-}, {passive: true});
-window.addEventListener('touchend', (e) => {
-  touchCount = e.touches.length;
-  if (touchCount < 2) { socket.emit('boost', false); isBoosting = false; }
-  if (touchCount === 1) {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-  }
-}, {passive: true});
+// --- Joystick tactile (pour mobile) ---
+let joystickActive = false;
+let joystickCenterX = 0, joystickCenterY = 0;
+const joystickRadius = 50; // rayon max de déplacement du knob
 
-// Souris
+function setupJoystick() {
+  const rect = joystickZone.getBoundingClientRect();
+  joystickCenterX = rect.left + rect.width/2;
+  joystickCenterY = rect.top + rect.height/2;
+}
+
+// Initialiser les coordonnées du joystick après le chargement
+setTimeout(setupJoystick, 100);
+window.addEventListener('resize', setupJoystick);
+
+joystickZone.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  isTouchDevice = true;
+  const touch = e.touches[0];
+  handleJoystickMove(touch.clientX, touch.clientY);
+  joystickActive = true;
+}, {passive: false});
+
+joystickZone.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  handleJoystickMove(touch.clientX, touch.clientY);
+}, {passive: false});
+
+joystickZone.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  joystickActive = false;
+  // Remettre le knob au centre
+  joystickKnob.style.transform = 'translate(-50%, -50%)';
+  // Arrêter le mouvement ? On peut garder le dernier angle ou arrêter.
+  // On va arrêter d'envoyer des moves (mais le serveur garde le dernier angle)
+  // Pour éviter de rester bloqué, on peut envoyer un angle nul ? Non, on garde.
+}, {passive: false});
+
+function handleJoystickMove(clientX, clientY) {
+  const dx = clientX - joystickCenterX;
+  const dy = clientY - joystickCenterY;
+  const dist = Math.hypot(dx, dy);
+  const maxDist = joystickRadius;
+  let clampedX = dx, clampedY = dy;
+  if (dist > maxDist) {
+    clampedX = (dx / dist) * maxDist;
+    clampedY = (dy / dist) * maxDist;
+  }
+  // Déplacer le knob
+  joystickKnob.style.transform = `translate(${-50 + (clampedX / joystickRadius) * 50}%, ${-50 + (clampedY / joystickRadius) * 50}%)`;
+  // Calculer l'angle
+  if (dist > 10) { // seuil pour éviter les micro-mouvements
+    const angle = Math.atan2(dy, dx);
+    mouseAngle = angle;
+    sendMoveIfChanged(angle);
+  }
+}
+
+// --- Souris (PC) ---
 window.addEventListener('mousemove', (e) => {
   if (!isTouchDevice && !anyKeyActive()) {
     const angle = Math.atan2(e.clientY - window.innerHeight/2, e.clientX - window.innerWidth/2);
@@ -220,9 +272,9 @@ setInterval(() => {
 }, 35);
 
 // Minimap
-const minimap = document.getElementById('minimap').getContext('2d');
-document.getElementById('minimap').width = 130;
-document.getElementById('minimap').height = 130;
+const minimap = minimapCanvas.getContext('2d');
+minimapCanvas.width = 130;
+minimapCanvas.height = 130;
 let lastMinimapUpdate = 0;
 
 // Boucle de rendu
@@ -265,7 +317,9 @@ app.ticker.add(() => {
   sorted.forEach(p => {
     if (p.dead) return;
     const colors = SKINS[p.skin] || SKINS.cyan;
+    const isLocal = (p.id === playerId);
 
+    // Effet boost
     if (p.boostActive && Math.random() < 0.3) {
       gameGraphics.blendMode = PIXI.BLEND_MODES.ADD;
       gameGraphics.beginFill(colors.body, 0.3);
@@ -274,6 +328,7 @@ app.ticker.add(() => {
       gameGraphics.blendMode = PIXI.BLEND_MODES.NORMAL;
     }
 
+    // Segments
     for (let i = p.segments.length - 1; i >= 0; i--) {
       const seg = p.segments[i];
       const size = p.size * (1 - (i / Math.max(1, p.segments.length)) * 0.2);
@@ -285,6 +340,12 @@ app.ticker.add(() => {
       gameGraphics.endFill();
     }
 
+    // Corps principal (avec halo blanc si local)
+    if (isLocal) {
+      gameGraphics.beginFill(0xffffff, 0.4);
+      gameGraphics.drawCircle(p.x, p.y, p.size * 1.6);
+      gameGraphics.endFill();
+    }
     gameGraphics.beginFill(colors.glow, 0.3);
     gameGraphics.drawCircle(p.x, p.y, p.size * 1.35);
     gameGraphics.endFill();
@@ -292,6 +353,7 @@ app.ticker.add(() => {
     gameGraphics.drawCircle(p.x, p.y, p.size);
     gameGraphics.endFill();
 
+    // Yeux
     const eye1 = p.angle + 0.48, eye2 = p.angle - 0.48;
     const ed = p.size * 0.5, es = p.size * 0.35;
     gameGraphics.beginFill(0xFFFFFF);
@@ -324,7 +386,8 @@ app.ticker.add(() => {
       textObj.crown.visible = false;
     }
 
-    if (p.id === playerId) {
+    // Mise à jour du HUD si c'est le joueur local
+    if (isLocal) {
       const targetZoom = Math.max(0.45, 1.1 - (p.size / 110));
       currentZoom += (targetZoom - currentZoom) * 0.05;
       world.scale.set(currentZoom);
@@ -333,12 +396,13 @@ app.ticker.add(() => {
       world.x += (tx - world.x) * 0.15;
       world.y += (ty - world.y) * 0.15;
 
-      document.getElementById('score').innerText = Math.floor(p.score);
-      document.getElementById('len').innerText = Math.floor(p.size);
-      document.getElementById('rank').innerText = sorted.indexOf(p) + 1;
-      document.getElementById('total').innerText = sorted.length;
-      document.getElementById('speed').innerText = Math.round(p.speed);
+      scoreEl.innerText = Math.floor(p.score);
+      lenEl.innerText = Math.floor(p.size);
+      rankEl.innerText = sorted.indexOf(p) + 1;
+      totalEl.innerText = sorted.length;
+      speedEl.innerText = Math.round(p.speed);
 
+      // Minimap
       if (now - lastMinimapUpdate > 100) {
         lastMinimapUpdate = now;
         minimap.clearRect(0,0,130,130);
@@ -355,7 +419,8 @@ app.ticker.add(() => {
     }
   });
 
-  document.getElementById('leaders').innerHTML = sorted.slice(0,7).map((p,i) =>
+  // Leaderboard
+  leadersEl.innerHTML = sorted.slice(0,7).map((p,i) =>
     `<div style="color:${i===0?'#00ffcc':i===1?'#ff0055':'#b2b2cc'}; margin:4px 0; font-family: monospace;">#${i+1} ${p.name.substring(0,9).padEnd(10,'_')} [${Math.floor(p.score)}]</div>`
   ).join('');
 });
