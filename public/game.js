@@ -4,7 +4,21 @@ const socket = io("https://snake-arena-io.onrender.com", {
   upgrade: true
 });
 
-// Éléments du DOM
+// Variables globales
+let playerId = null;
+let game = { players: {}, orbs: [] };
+let mouseAngle = 0;
+let lastSentAngle = null;
+let isBoosting = false;
+let currentZoom = 1;
+let particles = [];
+let isConnected = false;
+let joinAttempts = 0;
+
+// Position locale du joueur (pour la caméra)
+let localPos = { x: 2500, y: 2500 }; // position par défaut au centre
+
+// Éléments DOM
 const menu = document.getElementById('menu');
 const startBtn = document.getElementById('startBtn');
 const nameInput = document.getElementById('name');
@@ -19,39 +33,29 @@ const minimapCanvas = document.getElementById('minimap');
 const deadScreen = document.getElementById('dead');
 const finalScoreEl = document.getElementById('finalScore');
 const respawnBtn = document.getElementById('respawnBtn');
-const joystickZone = document.getElementById('joystickZone');
-const joystickKnob = document.getElementById('joystickKnob');
 
 // Gestion du menu
 socket.on('connect', () => {
-  console.log("✅ Connecté");
+  console.log("✅ Connecté au serveur");
   menu.style.display = 'flex';
 });
-socket.on('connect_error', () => {
+socket.on('connect_error', (err) => {
+  console.error("❌ Erreur de connexion:", err);
   menu.style.display = 'flex';
 });
 
 // Erreurs fatales
 window.addEventListener('error', (e) => {
   const box = document.createElement('div');
-  box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#ff0055;color:#fff;padding:12px;font-family:monospace;';
+  box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#ff0055;color:#fff;padding:12px;font-family:monospace;z-index:9999;';
   box.textContent = 'Erreur: ' + e.message;
   document.body.appendChild(box);
+  console.error(e);
 });
 
 // PIXI
 let app = new PIXI.Application({ resizeTo: window, antialias: true, backgroundColor: 0x05050b });
 document.body.prepend(app.view);
-
-let playerId = null;
-let game = { players: {}, orbs: [] };
-let mouseAngle = 0;
-let lastSentAngle = null;
-let isBoosting = false;
-let currentZoom = 1;
-let particles = [];
-let isConnected = false;
-let reconnectTimer = null;
 
 const world = new PIXI.Container();
 app.stage.addChild(world);
@@ -82,13 +86,14 @@ const textCache = new Map();
 startBtn.addEventListener('click', () => {
   const name = nameInput.value.trim() || 'Anon';
   const skin = skinInput.value;
+  console.log(`📤 Envoi de join avec nom=${name}, skin=${skin}`);
   socket.emit('join', { name, skin });
   menu.style.display = 'none';
   document.getElementById('hud').style.display = 'block';
   document.getElementById('length').style.display = 'block';
   document.getElementById('leaderboard').style.display = 'block';
   document.getElementById('minimap').style.display = 'block';
-  // Afficher le joystick sur mobile (déjà via CSS)
+  document.getElementById('score').innerText = '…';
 });
 
 // Respawn
@@ -103,11 +108,11 @@ respawnBtn.addEventListener('click', () => {
 
 // Socket events
 socket.on('init', (id) => {
+  console.log(`🆔 ID reçu du serveur: ${id}`);
   playerId = id;
   isConnected = true;
-  sendMoveIfChanged(0);
-  // Efface le timer de reconnexion
-  if (reconnectTimer) clearTimeout(reconnectTimer);
+  sendMoveIfChanged(0.3);
+  joinAttempts = 0;
 });
 
 socket.on('state', (g) => {
@@ -119,21 +124,31 @@ socket.on('state', (g) => {
   });
   game = g;
 
-  // Vérification : le joueur local est-il présent ?
-  if (playerId && !game.players[playerId]) {
-    console.warn("⚠️ Joueur local absent, rejoin dans 500ms");
-    if (reconnectTimer) clearTimeout(reconnectTimer);
-    reconnectTimer = setTimeout(() => {
-      socket.emit('join', {
-        name: nameInput.value.trim() || 'Anon',
-        skin: skinInput.value
-      });
-      reconnectTimer = null;
-    }, 500);
+  // Mettre à jour la position locale si le joueur existe
+  if (playerId && game.players[playerId]) {
+    const p = game.players[playerId];
+    localPos.x = p.x;
+    localPos.y = p.y;
+    if (!p.dead) {
+      scoreEl.innerText = Math.floor(p.score);
+    }
+  } else if (playerId) {
+    // Le joueur local n'est pas dans le state, rejoin
+    console.warn(`⚠️ Joueur local ${playerId} absent, rejoin...`);
+    if (joinAttempts < 5) {
+      joinAttempts++;
+      setTimeout(() => {
+        socket.emit('join', {
+          name: nameInput.value.trim() || 'Anon',
+          skin: skinInput.value
+        });
+      }, 300);
+    }
   }
 });
 
 socket.on('dead', (data) => {
+  console.log(`💀 Mort, score: ${data.score}`);
   finalScoreEl.innerText = Math.floor(data.score);
   deadScreen.style.display = 'block';
 });
@@ -183,25 +198,28 @@ window.addEventListener('keyup', (e) => {
 });
 
 function sendMoveIfChanged(angle) {
-  if (!isConnected) return;
+  if (!isConnected || !playerId) {
+    mouseAngle = angle;
+    return;
+  }
   if (lastSentAngle === null || Math.abs(angle - lastSentAngle) > 0.001) {
     lastSentAngle = angle;
     socket.emit('move', angle);
   }
 }
 
-// --- Joystick tactile (pour mobile) ---
+// --- Joystick tactile ---
+const joystickZone = document.getElementById('joystickZone');
+const joystickKnob = document.getElementById('joystickKnob');
 let joystickActive = false;
 let joystickCenterX = 0, joystickCenterY = 0;
-const joystickRadius = 50; // rayon max de déplacement du knob
+const joystickRadius = 50;
 
 function setupJoystick() {
   const rect = joystickZone.getBoundingClientRect();
   joystickCenterX = rect.left + rect.width/2;
   joystickCenterY = rect.top + rect.height/2;
 }
-
-// Initialiser les coordonnées du joystick après le chargement
 setTimeout(setupJoystick, 100);
 window.addEventListener('resize', setupJoystick);
 
@@ -222,11 +240,7 @@ joystickZone.addEventListener('touchmove', (e) => {
 joystickZone.addEventListener('touchend', (e) => {
   e.preventDefault();
   joystickActive = false;
-  // Remettre le knob au centre
   joystickKnob.style.transform = 'translate(-50%, -50%)';
-  // Arrêter le mouvement ? On peut garder le dernier angle ou arrêter.
-  // On va arrêter d'envoyer des moves (mais le serveur garde le dernier angle)
-  // Pour éviter de rester bloqué, on peut envoyer un angle nul ? Non, on garde.
 }, {passive: false});
 
 function handleJoystickMove(clientX, clientY) {
@@ -239,17 +253,15 @@ function handleJoystickMove(clientX, clientY) {
     clampedX = (dx / dist) * maxDist;
     clampedY = (dy / dist) * maxDist;
   }
-  // Déplacer le knob
   joystickKnob.style.transform = `translate(${-50 + (clampedX / joystickRadius) * 50}%, ${-50 + (clampedY / joystickRadius) * 50}%)`;
-  // Calculer l'angle
-  if (dist > 10) { // seuil pour éviter les micro-mouvements
+  if (dist > 10) {
     const angle = Math.atan2(dy, dx);
     mouseAngle = angle;
     sendMoveIfChanged(angle);
   }
 }
 
-// --- Souris (PC) ---
+// --- Souris ---
 window.addEventListener('mousemove', (e) => {
   if (!isTouchDevice && !anyKeyActive()) {
     const angle = Math.atan2(e.clientY - window.innerHeight/2, e.clientX - window.innerWidth/2);
@@ -340,7 +352,7 @@ app.ticker.add(() => {
       gameGraphics.endFill();
     }
 
-    // Corps principal (avec halo blanc si local)
+    // Corps principal
     if (isLocal) {
       gameGraphics.beginFill(0xffffff, 0.4);
       gameGraphics.drawCircle(p.x, p.y, p.size * 1.6);
@@ -386,38 +398,61 @@ app.ticker.add(() => {
       textObj.crown.visible = false;
     }
 
-    // Mise à jour du HUD si c'est le joueur local
+    // Mise à jour du HUD pour le local
     if (isLocal) {
-      const targetZoom = Math.max(0.45, 1.1 - (p.size / 110));
-      currentZoom += (targetZoom - currentZoom) * 0.05;
-      world.scale.set(currentZoom);
-      const tx = -p.x * currentZoom + window.innerWidth/2;
-      const ty = -p.y * currentZoom + window.innerHeight/2;
-      world.x += (tx - world.x) * 0.15;
-      world.y += (ty - world.y) * 0.15;
-
       scoreEl.innerText = Math.floor(p.score);
       lenEl.innerText = Math.floor(p.size);
       rankEl.innerText = sorted.indexOf(p) + 1;
       totalEl.innerText = sorted.length;
       speedEl.innerText = Math.round(p.speed);
-
-      // Minimap
-      if (now - lastMinimapUpdate > 100) {
-        lastMinimapUpdate = now;
-        minimap.clearRect(0,0,130,130);
-        minimap.fillStyle = 'rgba(8,8,16,0.7)';
-        minimap.beginPath(); minimap.arc(65,65,65,0,7); minimap.fill();
-        Object.values(game.players).forEach(pl => {
-          if (pl.dead) return;
-          minimap.fillStyle = pl.id === playerId ? '#00ffcc' : '#ff0055';
-          minimap.beginPath();
-          minimap.arc(65 + (pl.x-2500)/5000*115, 65 + (pl.y-2500)/5000*115, pl.id === playerId ? 4 : 2, 0, 7);
-          minimap.fill();
-        });
-      }
     }
   });
+
+  // === GESTION DE LA CAMÉRA ===
+  // Utiliser localPos (mis à jour dans le state) ou la position du joueur local si présent
+  let targetX = localPos.x;
+  let targetY = localPos.y;
+  // Si le joueur local est dans le state, on prend sa position
+  if (playerId && game.players[playerId]) {
+    const p = game.players[playerId];
+    if (!p.dead) {
+      targetX = p.x;
+      targetY = p.y;
+      // On met à jour localPos pour la prochaine fois
+      localPos.x = p.x;
+      localPos.y = p.y;
+    }
+  }
+
+  // Calcul du zoom
+  let targetZoom = 1;
+  if (playerId && game.players[playerId]) {
+    const p = game.players[playerId];
+    targetZoom = Math.max(0.45, 1.1 - (p.size / 110));
+  }
+  currentZoom += (targetZoom - currentZoom) * 0.05;
+  world.scale.set(currentZoom);
+
+  // Calcul de la position de la caméra
+  const desiredX = -targetX * currentZoom + window.innerWidth / 2;
+  const desiredY = -targetY * currentZoom + window.innerHeight / 2;
+  world.x += (desiredX - world.x) * 0.15;
+  world.y += (desiredY - world.y) * 0.15;
+
+  // Minimap (mise à jour périodique)
+  if (now - lastMinimapUpdate > 100) {
+    lastMinimapUpdate = now;
+    minimap.clearRect(0,0,130,130);
+    minimap.fillStyle = 'rgba(8,8,16,0.7)';
+    minimap.beginPath(); minimap.arc(65,65,65,0,7); minimap.fill();
+    Object.values(game.players).forEach(pl => {
+      if (pl.dead) return;
+      minimap.fillStyle = pl.id === playerId ? '#00ffcc' : '#ff0055';
+      minimap.beginPath();
+      minimap.arc(65 + (pl.x-2500)/5000*115, 65 + (pl.y-2500)/5000*115, pl.id === playerId ? 4 : 2, 0, 7);
+      minimap.fill();
+    });
+  }
 
   // Leaderboard
   leadersEl.innerHTML = sorted.slice(0,7).map((p,i) =>
