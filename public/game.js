@@ -1,10 +1,8 @@
-// Connexion au serveur
+// ----- CONNEXION -----
 const socket = io("https://snake-arena-io.onrender.com", {
-  transports: ['websocket', 'polling'],
-  upgrade: true
+  transports: ['websocket', 'polling']
 });
 
-// Variables globales
 let playerId = null;
 let game = { players: {}, orbs: [] };
 let mouseAngle = 0;
@@ -12,11 +10,6 @@ let lastSentAngle = null;
 let isBoosting = false;
 let currentZoom = 1;
 let particles = [];
-let isConnected = false;
-let joinAttempts = 0;
-
-// Position locale du joueur (pour la caméra)
-let localPos = { x: 2500, y: 2500 }; // position par défaut au centre
 
 // Éléments DOM
 const menu = document.getElementById('menu');
@@ -33,28 +26,20 @@ const minimapCanvas = document.getElementById('minimap');
 const deadScreen = document.getElementById('dead');
 const finalScoreEl = document.getElementById('finalScore');
 const respawnBtn = document.getElementById('respawnBtn');
+const joystick = document.getElementById('joystick');
+const joystickKnob = document.getElementById('joystick-knob');
 
-// Gestion du menu
+// Menu
 socket.on('connect', () => {
-  console.log("✅ Connecté au serveur");
+  console.log('✅ Connecté');
   menu.style.display = 'flex';
 });
-socket.on('connect_error', (err) => {
-  console.error("❌ Erreur de connexion:", err);
+socket.on('connect_error', () => {
   menu.style.display = 'flex';
 });
 
-// Erreurs fatales
-window.addEventListener('error', (e) => {
-  const box = document.createElement('div');
-  box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#ff0055;color:#fff;padding:12px;font-family:monospace;z-index:9999;';
-  box.textContent = 'Erreur: ' + e.message;
-  document.body.appendChild(box);
-  console.error(e);
-});
-
-// PIXI
-let app = new PIXI.Application({ resizeTo: window, antialias: true, backgroundColor: 0x05050b });
+// ----- PIXI -----
+const app = new PIXI.Application({ resizeTo: window, antialias: true, backgroundColor: 0x05050b });
 document.body.prepend(app.view);
 
 const world = new PIXI.Container();
@@ -69,34 +54,32 @@ const SKINS = {
 };
 
 // Grille
-const gridBg = new PIXI.Graphics();
-gridBg.lineStyle(1.5, 0x00ffcc, 0.07);
-for (let x = 0; x <= 5000; x += 120) { gridBg.moveTo(x, 0); gridBg.lineTo(x, 5000); }
-for (let y = 0; y <= 5000; y += 120) { gridBg.moveTo(0, y); gridBg.lineTo(5000, y); }
-gridBg.lineStyle(8, 0xff0055, 0.6); gridBg.drawRect(0, 0, 5000, 5000);
-world.addChild(gridBg);
+const grid = new PIXI.Graphics();
+grid.lineStyle(1.5, 0x00ffcc, 0.07);
+for (let x = 0; x <= 5000; x += 120) { grid.moveTo(x, 0); grid.lineTo(x, 5000); }
+for (let y = 0; y <= 5000; y += 120) { grid.moveTo(0, y); grid.lineTo(5000, y); }
+grid.lineStyle(8, 0xff0055, 0.6);
+grid.drawRect(0, 0, 5000, 5000);
+world.addChild(grid);
 
-const gameGraphics = new PIXI.Graphics();
-world.addChild(gameGraphics);
+const graphics = new PIXI.Graphics();
+world.addChild(graphics);
 const textContainer = new PIXI.Container();
 world.addChild(textContainer);
 const textCache = new Map();
 
-// Bouton start
+// ----- START -----
 startBtn.addEventListener('click', () => {
   const name = nameInput.value.trim() || 'Anon';
   const skin = skinInput.value;
-  console.log(`📤 Envoi de join avec nom=${name}, skin=${skin}`);
   socket.emit('join', { name, skin });
   menu.style.display = 'none';
   document.getElementById('hud').style.display = 'block';
   document.getElementById('length').style.display = 'block';
   document.getElementById('leaderboard').style.display = 'block';
   document.getElementById('minimap').style.display = 'block';
-  document.getElementById('score').innerText = '…';
 });
 
-// Respawn
 respawnBtn.addEventListener('click', () => {
   socket.emit('respawn');
   deadScreen.style.display = 'none';
@@ -106,55 +89,35 @@ respawnBtn.addEventListener('click', () => {
   document.getElementById('minimap').style.display = 'block';
 });
 
-// Socket events
+// ----- SOCKET -----
 socket.on('init', (id) => {
-  console.log(`🆔 ID reçu du serveur: ${id}`);
   playerId = id;
-  isConnected = true;
+  console.log('🆔 ID:', id);
   sendMoveIfChanged(0.3);
-  joinAttempts = 0;
 });
 
 socket.on('state', (g) => {
-  // Détection des morts
-  Object.keys(game.players).forEach(id => {
-    if (g.players[id] && game.players[id] && !game.players[id].dead && g.players[id].dead) {
-      triggerExplosion(g.players[id].x, g.players[id].y, game.players[id].color);
-    }
-  });
   game = g;
-
-  // Mettre à jour la position locale si le joueur existe
-  if (playerId && game.players[playerId]) {
-    const p = game.players[playerId];
-    localPos.x = p.x;
-    localPos.y = p.y;
-    if (!p.dead) {
-      scoreEl.innerText = Math.floor(p.score);
-    }
-  } else if (playerId) {
-    // Le joueur local n'est pas dans le state, rejoin
-    console.warn(`⚠️ Joueur local ${playerId} absent, rejoin...`);
-    if (joinAttempts < 5) {
-      joinAttempts++;
-      setTimeout(() => {
-        socket.emit('join', {
-          name: nameInput.value.trim() || 'Anon',
-          skin: skinInput.value
-        });
-      }, 300);
-    }
+  // Vérifier si le joueur local est présent
+  if (playerId && !game.players[playerId]) {
+    console.warn('⚠️ Joueur local absent, rejoin...');
+    setTimeout(() => {
+      socket.emit('join', {
+        name: nameInput.value.trim() || 'Anon',
+        skin: skinInput.value
+      });
+    }, 300);
   }
 });
 
 socket.on('dead', (data) => {
-  console.log(`💀 Mort, score: ${data.score}`);
-  finalScoreEl.innerText = Math.floor(data.score);
-  deadScreen.style.display = 'block';
+  finalScoreEl.textContent = Math.floor(data.score);
+  deadScreen.style.display = 'flex';
 });
 
+// ----- PARTICULES (explosion) -----
 function triggerExplosion(x, y, color) {
-  const pColor = parseInt(color);
+  const c = parseInt(color);
   for (let i = 0; i < 30; i++) {
     particles.push({
       x, y,
@@ -162,25 +125,25 @@ function triggerExplosion(x, y, color) {
       vy: (Math.random() - 0.5) * 14,
       alpha: 1,
       size: 3 + Math.random() * 4,
-      color: pColor
+      color: c
     });
   }
 }
 
-// --- Contrôles clavier ---
-let keys = { w:false, a:false, s:false, d:false, z:false, q:false, ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false };
-let isTouchDevice = false;
+// ----- CONTRÔLES CLAVIER -----
+const keys = { w:false, a:false, s:false, d:false, z:false, q:false, ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false };
+let isTouch = false;
 
-function anyKeyActive() { return Object.values(keys).some(v => v); }
+function anyKey() { return Object.values(keys).some(v => v); }
 
-function calculateKeyAngle() {
+function calcKeyAngle() {
   let x = 0, y = 0;
   if (keys.w || keys.z || keys.ArrowUp) y -= 1;
   if (keys.s || keys.ArrowDown) y += 1;
   if (keys.a || keys.q || keys.ArrowLeft) x -= 1;
   if (keys.d || keys.ArrowRight) x += 1;
   if (x !== 0 || y !== 0) {
-    isTouchDevice = false;
+    isTouch = false;
     mouseAngle = Math.atan2(y, x);
     sendMoveIfChanged(mouseAngle);
   }
@@ -189,71 +152,74 @@ function calculateKeyAngle() {
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Space') { socket.emit('boost', true); isBoosting = true; }
   if (e.key in keys) keys[e.key] = true;
-  calculateKeyAngle();
+  calcKeyAngle();
 });
 window.addEventListener('keyup', (e) => {
   if (e.code === 'Space') { socket.emit('boost', false); isBoosting = false; }
   if (e.key in keys) keys[e.key] = false;
-  calculateKeyAngle();
+  calcKeyAngle();
 });
 
 function sendMoveIfChanged(angle) {
-  if (!isConnected || !playerId) {
-    mouseAngle = angle;
-    return;
-  }
+  if (!playerId) return;
   if (lastSentAngle === null || Math.abs(angle - lastSentAngle) > 0.001) {
     lastSentAngle = angle;
     socket.emit('move', angle);
   }
 }
 
-// --- Joystick tactile ---
-const joystickZone = document.getElementById('joystickZone');
-const joystickKnob = document.getElementById('joystickKnob');
+// ----- SOURIS -----
+window.addEventListener('mousemove', (e) => {
+  if (!isTouch && !anyKey()) {
+    const angle = Math.atan2(e.clientY - window.innerHeight/2, e.clientX - window.innerWidth/2);
+    mouseAngle = angle;
+    sendMoveIfChanged(angle);
+  }
+});
+
+// ----- JOYSTICK (tactile) -----
 let joystickActive = false;
-let joystickCenterX = 0, joystickCenterY = 0;
-const joystickRadius = 50;
+let jCenterX = 0, jCenterY = 0;
+const jRadius = 50;
 
 function setupJoystick() {
-  const rect = joystickZone.getBoundingClientRect();
-  joystickCenterX = rect.left + rect.width/2;
-  joystickCenterY = rect.top + rect.height/2;
+  const rect = joystick.getBoundingClientRect();
+  jCenterX = rect.left + rect.width/2;
+  jCenterY = rect.top + rect.height/2;
 }
-setTimeout(setupJoystick, 100);
+setTimeout(setupJoystick, 200);
 window.addEventListener('resize', setupJoystick);
 
-joystickZone.addEventListener('touchstart', (e) => {
+joystick.addEventListener('touchstart', (e) => {
   e.preventDefault();
-  isTouchDevice = true;
+  isTouch = true;
   const touch = e.touches[0];
-  handleJoystickMove(touch.clientX, touch.clientY);
+  handleJoystick(touch.clientX, touch.clientY);
   joystickActive = true;
 }, {passive: false});
 
-joystickZone.addEventListener('touchmove', (e) => {
+joystick.addEventListener('touchmove', (e) => {
   e.preventDefault();
   const touch = e.touches[0];
-  handleJoystickMove(touch.clientX, touch.clientY);
+  handleJoystick(touch.clientX, touch.clientY);
 }, {passive: false});
 
-joystickZone.addEventListener('touchend', (e) => {
+joystick.addEventListener('touchend', (e) => {
   e.preventDefault();
   joystickActive = false;
   joystickKnob.style.transform = 'translate(-50%, -50%)';
 }, {passive: false});
 
-function handleJoystickMove(clientX, clientY) {
-  const dx = clientX - joystickCenterX;
-  const dy = clientY - joystickCenterY;
+function handleJoystick(cx, cy) {
+  const dx = cx - jCenterX;
+  const dy = cy - jCenterY;
   const dist = Math.hypot(dx, dy);
-  const maxDist = joystickRadius;
   let clampedX = dx, clampedY = dy;
-  if (dist > maxDist) {
-    clampedX = (dx / dist) * maxDist;
-    clampedY = (dy / dist) * maxDist;
+  if (dist > jRadius) {
+    clampedX = (dx / dist) * jRadius;
+    clampedY = (dy / dist) * jRadius;
   }
-  joystickKnob.style.transform = `translate(${-50 + (clampedX / joystickRadius) * 50}%, ${-50 + (clampedY / joystickRadius) * 50}%)`;
+  joystickKnob.style.transform = `translate(${-50 + (clampedX/jRadius)*50}%, ${-50 + (clampedY/jRadius)*50}%)`;
   if (dist > 10) {
     const angle = Math.atan2(dy, dx);
     mouseAngle = angle;
@@ -261,18 +227,9 @@ function handleJoystickMove(clientX, clientY) {
   }
 }
 
-// --- Souris ---
-window.addEventListener('mousemove', (e) => {
-  if (!isTouchDevice && !anyKeyActive()) {
-    const angle = Math.atan2(e.clientY - window.innerHeight/2, e.clientX - window.innerWidth/2);
-    mouseAngle = angle;
-    sendMoveIfChanged(angle);
-  }
-});
-
-// Envoi périodique
+// Envoi périodique (sécurité)
 setInterval(() => {
-  if (isConnected && playerId && game.players[playerId] && !game.players[playerId].dead) {
+  if (playerId && game.players[playerId] && !game.players[playerId].dead) {
     if (lastSentAngle === null) {
       socket.emit('move', mouseAngle);
       lastSentAngle = mouseAngle;
@@ -283,47 +240,47 @@ setInterval(() => {
   }
 }, 35);
 
-// Minimap
-const minimap = minimapCanvas.getContext('2d');
-minimapCanvas.width = 130;
-minimapCanvas.height = 130;
+// ----- MINIMAP -----
+const ctx = minimapCanvas.getContext('2d');
 let lastMinimapUpdate = 0;
 
-// Boucle de rendu
-app.ticker.add(() => {
+// ----- RENDU -----
+app.ticker.add((delta) => {
   const now = Date.now();
-  gameGraphics.clear();
+  graphics.clear();
   textContainer.removeChildren();
 
   // Particules
-  gameGraphics.blendMode = PIXI.BLEND_MODES.ADD;
+  graphics.blendMode = PIXI.BLEND_MODES.ADD;
   particles.forEach((p, idx) => {
-    p.x += p.vx; p.y += p.vy; p.vx *= 0.95; p.vy *= 0.95; p.alpha -= 0.03;
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= 0.95; p.vy *= 0.95;
+    p.alpha -= 0.03;
     if (p.alpha <= 0) { particles.splice(idx, 1); return; }
-    gameGraphics.beginFill(p.color, p.alpha);
-    gameGraphics.drawCircle(p.x, p.y, p.size);
-    gameGraphics.endFill();
+    graphics.beginFill(p.color, p.alpha);
+    graphics.drawCircle(p.x, p.y, p.size);
+    graphics.endFill();
   });
-  gameGraphics.blendMode = PIXI.BLEND_MODES.NORMAL;
+  graphics.blendMode = PIXI.BLEND_MODES.NORMAL;
 
   // Orbes
   game.orbs.forEach((orb) => {
     const color = parseInt(orb.color);
     const pulse = 1 + Math.sin(now * 0.007) * 0.1;
-    gameGraphics.beginFill(color, 0.15);
-    gameGraphics.drawCircle(orb.x, orb.y, orb.size * 3.5 * pulse);
-    gameGraphics.endFill();
-    gameGraphics.beginFill(color, 0.9);
-    gameGraphics.drawCircle(orb.x, orb.y, orb.size);
-    gameGraphics.endFill();
-    gameGraphics.beginFill(0xFFFFFF, 0.9);
-    gameGraphics.drawCircle(orb.x - orb.size*0.18, orb.y - orb.size*0.18, orb.size * 0.3);
-    gameGraphics.endFill();
+    graphics.beginFill(color, 0.15);
+    graphics.drawCircle(orb.x, orb.y, orb.size * 3.5 * pulse);
+    graphics.endFill();
+    graphics.beginFill(color, 0.9);
+    graphics.drawCircle(orb.x, orb.y, orb.size);
+    graphics.endFill();
+    graphics.beginFill(0xFFFFFF, 0.9);
+    graphics.drawCircle(orb.x - orb.size*0.18, orb.y - orb.size*0.18, orb.size * 0.3);
+    graphics.endFill();
   });
 
   // Classement
   const sorted = Object.values(game.players).filter(p => !p.dead).sort((a,b) => b.score - a.score);
-  const topPlayer = sorted[0] || null;
+  const top = sorted[0] || null;
 
   // Rendu des joueurs
   sorted.forEach(p => {
@@ -331,131 +288,118 @@ app.ticker.add(() => {
     const colors = SKINS[p.skin] || SKINS.cyan;
     const isLocal = (p.id === playerId);
 
-    // Effet boost
+    // Boost
     if (p.boostActive && Math.random() < 0.3) {
-      gameGraphics.blendMode = PIXI.BLEND_MODES.ADD;
-      gameGraphics.beginFill(colors.body, 0.3);
-      gameGraphics.drawCircle(p.x + (Math.random()-0.5)*12, p.y + (Math.random()-0.5)*12, p.size * 0.7);
-      gameGraphics.endFill();
-      gameGraphics.blendMode = PIXI.BLEND_MODES.NORMAL;
+      graphics.blendMode = PIXI.BLEND_MODES.ADD;
+      graphics.beginFill(colors.body, 0.3);
+      graphics.drawCircle(p.x + (Math.random()-0.5)*12, p.y + (Math.random()-0.5)*12, p.size * 0.7);
+      graphics.endFill();
+      graphics.blendMode = PIXI.BLEND_MODES.NORMAL;
     }
 
     // Segments
     for (let i = p.segments.length - 1; i >= 0; i--) {
       const seg = p.segments[i];
       const size = p.size * (1 - (i / Math.max(1, p.segments.length)) * 0.2);
-      gameGraphics.beginFill(colors.glow, 0.18);
-      gameGraphics.drawCircle(seg.x, seg.y, size * 1.3);
-      gameGraphics.endFill();
-      gameGraphics.beginFill(colors.body);
-      gameGraphics.drawCircle(seg.x, seg.y, size);
-      gameGraphics.endFill();
+      graphics.beginFill(colors.glow, 0.18);
+      graphics.drawCircle(seg.x, seg.y, size * 1.3);
+      graphics.endFill();
+      graphics.beginFill(colors.body);
+      graphics.drawCircle(seg.x, seg.y, size);
+      graphics.endFill();
     }
 
-    // Corps principal
+    // Corps
     if (isLocal) {
-      gameGraphics.beginFill(0xffffff, 0.4);
-      gameGraphics.drawCircle(p.x, p.y, p.size * 1.6);
-      gameGraphics.endFill();
+      graphics.beginFill(0xffffff, 0.4);
+      graphics.drawCircle(p.x, p.y, p.size * 1.6);
+      graphics.endFill();
     }
-    gameGraphics.beginFill(colors.glow, 0.3);
-    gameGraphics.drawCircle(p.x, p.y, p.size * 1.35);
-    gameGraphics.endFill();
-    gameGraphics.beginFill(colors.body);
-    gameGraphics.drawCircle(p.x, p.y, p.size);
-    gameGraphics.endFill();
+    graphics.beginFill(colors.glow, 0.3);
+    graphics.drawCircle(p.x, p.y, p.size * 1.35);
+    graphics.endFill();
+    graphics.beginFill(colors.body);
+    graphics.drawCircle(p.x, p.y, p.size);
+    graphics.endFill();
 
     // Yeux
-    const eye1 = p.angle + 0.48, eye2 = p.angle - 0.48;
+    const e1 = p.angle + 0.48, e2 = p.angle - 0.48;
     const ed = p.size * 0.5, es = p.size * 0.35;
-    gameGraphics.beginFill(0xFFFFFF);
-    gameGraphics.drawCircle(p.x + Math.cos(eye1)*ed, p.y + Math.sin(eye1)*ed, es);
-    gameGraphics.drawCircle(p.x + Math.cos(eye2)*ed, p.y + Math.sin(eye2)*ed, es);
-    gameGraphics.endFill();
+    graphics.beginFill(0xFFFFFF);
+    graphics.drawCircle(p.x + Math.cos(e1)*ed, p.y + Math.sin(e1)*ed, es);
+    graphics.drawCircle(p.x + Math.cos(e2)*ed, p.y + Math.sin(e2)*ed, es);
+    graphics.endFill();
 
     // Texte
-    let textObj = textCache.get(p.id);
-    if (!textObj) {
-      textObj = {
+    let obj = textCache.get(p.id);
+    if (!obj) {
+      obj = {
         name: new PIXI.Text('', { fontSize: 12, fill: 0xffffff, stroke: 0x010103, strokeThickness: 3, fontFamily: 'Arial', fontWeight: 'bold' }),
         crown: new PIXI.Text('', { fontSize: 16, fontFamily: 'Arial' })
       };
-      textCache.set(p.id, textObj);
-      textContainer.addChild(textObj.name);
-      textContainer.addChild(textObj.crown);
+      textCache.set(p.id, obj);
+      textContainer.addChild(obj.name);
+      textContainer.addChild(obj.crown);
     }
-    if (textObj.name.text !== p.name) textObj.name.text = p.name || '';
-    textObj.name.x = p.x - textObj.name.width/2;
-    textObj.name.y = p.y - p.size - 18;
+    if (obj.name.text !== p.name) obj.name.text = p.name || '';
+    obj.name.x = p.x - obj.name.width/2;
+    obj.name.y = p.y - p.size - 18;
 
-    if (topPlayer && p.id === topPlayer.id) {
+    if (top && p.id === top.id) {
       const bounce = Math.sin(now * 0.008) * 4;
-      textObj.crown.text = '👑';
-      textObj.crown.x = p.x - textObj.crown.width/2;
-      textObj.crown.y = p.y - p.size - 42 + bounce;
-      textObj.crown.visible = true;
+      obj.crown.text = '👑';
+      obj.crown.x = p.x - obj.crown.width/2;
+      obj.crown.y = p.y - p.size - 42 + bounce;
+      obj.crown.visible = true;
     } else {
-      textObj.crown.visible = false;
+      obj.crown.visible = false;
     }
 
-    // Mise à jour du HUD pour le local
+    // Mise à jour HUD local
     if (isLocal) {
-      scoreEl.innerText = Math.floor(p.score);
-      lenEl.innerText = Math.floor(p.size);
-      rankEl.innerText = sorted.indexOf(p) + 1;
-      totalEl.innerText = sorted.length;
-      speedEl.innerText = Math.round(p.speed);
+      scoreEl.textContent = Math.floor(p.score);
+      lenEl.textContent = Math.floor(p.size);
+      rankEl.textContent = sorted.indexOf(p) + 1;
+      totalEl.textContent = sorted.length;
+      speedEl.textContent = Math.round(p.speed);
     }
   });
 
-  // === GESTION DE LA CAMÉRA ===
-  // Utiliser localPos (mis à jour dans le state) ou la position du joueur local si présent
-  let targetX = localPos.x;
-  let targetY = localPos.y;
-  // Si le joueur local est dans le state, on prend sa position
+  // ---- CAMÉRA ----
+  let targetX = 2500, targetY = 2500;
+  let targetZoom = 1;
   if (playerId && game.players[playerId]) {
     const p = game.players[playerId];
     if (!p.dead) {
       targetX = p.x;
       targetY = p.y;
-      // On met à jour localPos pour la prochaine fois
-      localPos.x = p.x;
-      localPos.y = p.y;
+      targetZoom = Math.max(0.45, 1.1 - (p.size / 110));
     }
-  }
-
-  // Calcul du zoom
-  let targetZoom = 1;
-  if (playerId && game.players[playerId]) {
-    const p = game.players[playerId];
-    targetZoom = Math.max(0.45, 1.1 - (p.size / 110));
   }
   currentZoom += (targetZoom - currentZoom) * 0.05;
   world.scale.set(currentZoom);
+  const dx = -targetX * currentZoom + window.innerWidth/2;
+  const dy = -targetY * currentZoom + window.innerHeight/2;
+  world.x += (dx - world.x) * 0.15;
+  world.y += (dy - world.y) * 0.15;
 
-  // Calcul de la position de la caméra
-  const desiredX = -targetX * currentZoom + window.innerWidth / 2;
-  const desiredY = -targetY * currentZoom + window.innerHeight / 2;
-  world.x += (desiredX - world.x) * 0.15;
-  world.y += (desiredY - world.y) * 0.15;
-
-  // Minimap (mise à jour périodique)
+  // ---- MINIMAP ----
   if (now - lastMinimapUpdate > 100) {
     lastMinimapUpdate = now;
-    minimap.clearRect(0,0,130,130);
-    minimap.fillStyle = 'rgba(8,8,16,0.7)';
-    minimap.beginPath(); minimap.arc(65,65,65,0,7); minimap.fill();
+    ctx.clearRect(0,0,130,130);
+    ctx.fillStyle = 'rgba(8,8,16,0.7)';
+    ctx.beginPath(); ctx.arc(65,65,65,0,7); ctx.fill();
     Object.values(game.players).forEach(pl => {
       if (pl.dead) return;
-      minimap.fillStyle = pl.id === playerId ? '#00ffcc' : '#ff0055';
-      minimap.beginPath();
-      minimap.arc(65 + (pl.x-2500)/5000*115, 65 + (pl.y-2500)/5000*115, pl.id === playerId ? 4 : 2, 0, 7);
-      minimap.fill();
+      ctx.fillStyle = (pl.id === playerId) ? '#00ffcc' : '#ff0055';
+      ctx.beginPath();
+      ctx.arc(65 + (pl.x-2500)/5000*115, 65 + (pl.y-2500)/5000*115, (pl.id === playerId) ? 4 : 2, 0, 7);
+      ctx.fill();
     });
   }
 
-  // Leaderboard
+  // ---- LEADERBOARD ----
   leadersEl.innerHTML = sorted.slice(0,7).map((p,i) =>
-    `<div style="color:${i===0?'#00ffcc':i===1?'#ff0055':'#b2b2cc'}; margin:4px 0; font-family: monospace;">#${i+1} ${p.name.substring(0,9).padEnd(10,'_')} [${Math.floor(p.score)}]</div>`
+    `<div style="color:${i===0?'#00ffcc':i===1?'#ff0055':'#b2b2cc'};">#${i+1} ${p.name.substring(0,9)} [${Math.floor(p.score)}]</div>`
   ).join('');
 });
